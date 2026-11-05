@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: crispr-x-backend
+    runtime: python
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: CORS_ORIGINS
+        value: "*"
+      # Optionally add Hedera integration:
+      # - key: HEDERA_ACCOUNT_ID
+      #   scope: build,runtime
+      # - key: HEDERA_PRIVATE_KEY
+      #   scope: build,runtime
+      # - key: HEDERA_NETWORK
+      #   value: testnet
+      # - key: HEDERA_TOPIC_ID
+      #   scope: build,runtime
+
+  - type: static
+    name: crispr-x-frontend
+    staticPublishPath: ./frontend
+    buildCommand: "echo \"No build needed\""
