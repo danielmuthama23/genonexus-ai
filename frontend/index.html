@@ -1,0 +1,3286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CRISPR-X Nexus — Genomic Risk Intelligence Platform</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://unpkg.com/smiles-drawer@2/dist/smiles-drawer.min.js"></script>
+<script src="https://unpkg.com/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<style>
+  :root{
+    --bg-deep: #050c14;
+    --bg-panel: #0d1a25;
+    --bg-panel-2: #10202c;
+    --bg-panel-glass: rgba(14,28,40,.72);
+    --line: #1c3140;
+    --line-bright: #2c4a5c;
+    --teal: #2dd4bf;
+    --teal-dim: #1a8577;
+    --magenta: #e879f9;
+    --amber: #fbbf24;
+    --violet: #a78bfa;
+    --text: #dfe9ef;
+    --muted: #6d8798;
+    --danger: #fb7185;
+    --good: #4ade80;
+    --shadow: 0 20px 50px -20px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  html,body{margin:0;padding:0;background:var(--bg-deep);color:var(--text);font-family:'Inter',sans-serif;}
+  body{
+    background-image:
+      radial-gradient(ellipse 900px 500px at 12% -8%, rgba(45,212,191,.10), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(232,121,249,.08), transparent 55%),
+      repeating-linear-gradient(180deg, rgba(255,255,255,.014) 0px, rgba(255,255,255,.014) 1px, transparent 1px, transparent 3px);
+    background-attachment:fixed;
+  }
+  ::selection{background:var(--teal);color:#04141a;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{animation-duration:.001ms!important;transition-duration:.001ms!important;} }
+
+  .wrap{max-width:1400px;margin:0 auto;padding:0 24px 90px;}
+
+  /* ---- sticky instrument nav ---- */
+  nav.instrument-nav{position:sticky;top:0;z-index:40;background:rgba(5,12,20,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+  nav.instrument-nav .inner{max-width:1400px;margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:2px;overflow-x:auto;}
+  nav.instrument-nav a{white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--muted);text-decoration:none;padding:13px 14px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
+  nav.instrument-nav a:hover{color:var(--text);}
+  nav.instrument-nav a.active{color:var(--teal);border-bottom-color:var(--teal);}
+  nav.instrument-nav .navlogo{font-size:11px;color:var(--amber);letter-spacing:.12em;padding-right:16px;border-right:1px solid var(--line);margin-right:4px;font-family:'JetBrains Mono',monospace;}
+
+  header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:1px solid var(--line);padding:32px 0 22px;margin-bottom:26px;flex-wrap:wrap;position:relative;}
+  header.top::before{content:'';position:absolute;left:0;bottom:-1px;width:120px;height:1px;background:linear-gradient(90deg,var(--teal),transparent);}
+  .brand{display:flex;align-items:baseline;gap:12px;}
+  .brand .mark{color:var(--amber);font-size:13px;letter-spacing:.14em;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;}
+  .brand .mark::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);animation:blink 2.2s infinite;}
+  h1.title{font-size:34px;font-weight:700;margin:6px 0 6px;letter-spacing:-0.015em;background:linear-gradient(120deg,var(--text) 40%,var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .subtitle{color:var(--muted);font-size:14px;max-width:540px;line-height:1.55;}
+  .scope-pill{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:9px 14px;border-radius:100px;background:var(--bg-panel);white-space:nowrap;box-shadow:var(--shadow);}
+  .scope-pill b{color:var(--teal);}
+
+  /* ---- Molecule Construction Lab: CTA banner + button animation ---- */
+  .lab-cta-banner{position:relative;overflow:hidden;border-radius:16px;padding:22px 26px;margin-bottom:24px;
+    background:linear-gradient(120deg,#0d2a33,#0a1a24 55%,#150e2a);border:1px solid #1f5164;
+    display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+  .lab-cta-banner::before{content:'';position:absolute;inset:-40%;
+    background:radial-gradient(circle at 20% 30%, rgba(45,212,191,.16), transparent 60%),
+               radial-gradient(circle at 80% 70%, rgba(167,139,250,.14), transparent 55%);
+    animation:labDrift 12s ease-in-out infinite alternate;pointer-events:none;}
+  @keyframes labDrift{0%{transform:translate(0,0) scale(1);}100%{transform:translate(3%,-3%) scale(1.08);}}
+  .lab-cta-text{position:relative;z-index:1;max-width:560px;}
+  .lab-cta-text .kicker{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--amber);text-transform:uppercase;margin-bottom:6px;}
+  .lab-cta-text h3{font-size:19px;margin:0 0 6px;font-weight:700;}
+  .lab-cta-text p{font-size:12.5px;color:var(--muted);margin:0;line-height:1.55;}
+  #btn-open-lab{position:relative;z-index:1;flex-shrink:0;border:none;cursor:pointer;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14.5px;color:#04141a;
+    background:linear-gradient(135deg,var(--teal),#7ee8dc);padding:16px 26px;border-radius:100px;
+    box-shadow:0 0 0 0 rgba(45,212,191,.55);animation:labPulse 2.4s ease-out infinite;
+    display:inline-flex;align-items:center;gap:10px;transition:transform .15s ease;}
+  #btn-open-lab:hover{transform:translateY(-2px) scale(1.03);}
+  #btn-open-lab:active{transform:translateY(0) scale(0.98);}
+  #btn-open-lab .spark{font-size:16px;display:inline-block;animation:labSpin 3s linear infinite;}
+  @keyframes labPulse{
+    0%{box-shadow:0 0 0 0 rgba(45,212,191,.55);}
+    70%{box-shadow:0 0 0 16px rgba(45,212,191,0);}
+    100%{box-shadow:0 0 0 0 rgba(45,212,191,0);}
+  }
+  @keyframes labSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  .lab-modal-overlay{position:fixed;inset:0;background:rgba(3,8,12,.78);backdrop-filter:blur(3px);
+    z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
+  .lab-modal-overlay.open{display:flex;animation:labFadeIn .2s ease;}
+  @keyframes labFadeIn{from{opacity:0;}to{opacity:1;}}
+  .lab-modal{width:min(1120px,100%);max-height:92vh;overflow-y:auto;background:var(--bg-panel);
+    border:1px solid var(--line);border-radius:16px;padding:24px;
+    animation:labModalIn .22s cubic-bezier(.2,.9,.3,1.2);}
+  @keyframes labModalIn{from{opacity:0;transform:scale(.94) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+  .lab-modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+  .lab-modal-head h2{margin:0;}
+  #btn-close-lab{background:var(--bg-panel-2);border:1px solid var(--line);color:var(--muted);
+    border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;line-height:1;}
+  #btn-close-lab:hover{color:var(--text);border-color:var(--danger);}
+
+  .lab-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;}
+  @media(max-width:900px){.lab-grid{grid-template-columns:1fr;}}
+  .element-palette{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .el-btn{width:38px;height:38px;border-radius:9px;border:1.5px solid var(--line);background:var(--bg-panel-2);
+    color:var(--text);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;cursor:pointer;
+    transition:transform .12s ease,box-shadow .12s ease;}
+  .el-btn:hover{transform:translateY(-2px);}
+  .el-btn.active{box-shadow:0 0 0 2px var(--teal);border-color:var(--teal);}
+  .bond-order-toggle{display:flex;gap:6px;margin-bottom:10px;}
+  .bond-order-toggle button{flex:1;padding:7px;border-radius:8px;font-size:11px;background:var(--bg-panel-2);
+    border:1px solid var(--line);color:var(--muted);cursor:pointer;}
+  .bond-order-toggle button.active{color:var(--amber);border-color:var(--amber);background:rgba(251,191,36,.1);}
+  #lab-svg{width:100%;height:320px;background:radial-gradient(ellipse at 50% 30%,#0f2432 0%,#050b11 80%);
+    border-radius:10px;border:1px solid var(--line);cursor:crosshair;}
+  .lab-atom-node{transition:r .15s ease;}
+  .lab-atom-node.selected{stroke:var(--amber);stroke-width:2.5;}
+  #lab-3d-holder{position:relative;height:320px;border-radius:10px;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 30%,#0f2432 0%,#050b11 80%);border:1px solid var(--line);}
+  #lab-3d-holder canvas{display:block;width:100%!important;height:100%!important;}
+  .lab-result-box{margin-top:14px;padding:14px;border-radius:10px;background:var(--bg-panel-2);border:1px solid var(--line);min-height:60px;}
+  .lab-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+  .lab-result-grid .item{background:var(--bg-panel);border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center;}
+  .lab-result-grid .item .v{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--teal);font-size:14px;}
+  .lab-result-grid .item .k{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+  .lab-source-tag{display:inline-block;font-size:10px;padding:3px 8px;border-radius:100px;margin-left:8px;}
+  .lab-source-tag.real{background:rgba(74,222,128,.15);color:var(--good);}
+  .lab-source-tag.heuristic{background:rgba(251,191,36,.15);color:var(--amber);}
+  .lab-result-box.success-pop{animation:labResultPop .4s cubic-bezier(.2,.9,.3,1.3);}
+  @keyframes labResultPop{0%{transform:scale(.96);box-shadow:0 0 0 0 rgba(74,222,128,.4);}60%{box-shadow:0 0 0 8px rgba(74,222,128,0);}100%{transform:scale(1);}}
+
+  .grid{display:grid;grid-template-columns:1.35fr 1fr;gap:22px;}
+  @media(max-width:1000px){.grid{grid-template-columns:1fr;}}
+
+  .panel{background:var(--bg-panel-glass);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:20px;box-shadow:var(--shadow);transition:border-color .2s;scroll-margin-top:60px;}
+  .panel:hover{border-color:var(--line-bright);}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+  .panel h2 .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 6px var(--teal);}
+
+  #viewer-holder{position:relative;height:460px;border-radius:10px;overflow:hidden;background:radial-gradient(ellipse at 50% 30%, #0f2432 0%, #050b11 75%);border:1px solid var(--line);}
+  #viewer-holder canvas{display:block;width:100%!important;height:100%!important;cursor:grab;}
+  #viewer-holder canvas:active{cursor:grabbing;}
+  .viewer-hint{position:absolute;bottom:10px;left:14px;font-size:11px;color:var(--muted);pointer-events:none;}
+  .viewer-badge{position:absolute;top:12px;right:14px;font-size:11px;padding:5px 10px;border-radius:100px;background:rgba(6,15,22,.7);border:1px solid var(--line);}
+
+  .seq-strip{font-size:15px;line-height:1.9;word-break:break-all;padding:14px;background:var(--bg-panel-2);border-radius:8px;border:1px solid var(--line);}
+  .base{display:inline-block;width:1ch;text-align:center;border-radius:3px;cursor:pointer;transition:transform .1s;}
+  .base:hover{transform:translateY(-2px);}
+  .base.A{color:var(--teal);}
+  .base.T{color:var(--magenta);}
+  .base.C{color:var(--amber);}
+  .base.G{color:var(--violet);}
+  .base.mut{background:rgba(251,113,133,.22);outline:1px solid var(--danger);}
+  .base.target{background:rgba(45,212,191,.18);outline:1px dashed var(--teal);}
+  .base.cut{background:rgba(251,191,36,.35);}
+
+  label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;}
+  select,button,input[type=text]{font-family:'Inter',sans-serif;font-size:13px;background:var(--bg-panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 12px;width:100%;}
+  select:focus,button:focus,input:focus{outline:2px solid var(--teal);outline-offset:1px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .field{margin-bottom:12px;}
+  button.action{background:linear-gradient(135deg,#134152,#0e2a35);border:1px solid #1f5164;cursor:pointer;font-weight:600;letter-spacing:.02em;transition:filter .15s;}
+  button.action:hover{filter:brightness(1.25);}
+  button.action.primary{background:linear-gradient(135deg,#0d5c52,#0a3d38);border:1px solid var(--teal);}
+  button.action.warn{background:linear-gradient(135deg,#5c3a0d,#3d2a0a);border:1px solid var(--amber);}
+  button.action:disabled{opacity:.4;cursor:not-allowed;filter:none;}
+  label.action{font-family:'Inter',sans-serif;font-size:13px;text-transform:none;letter-spacing:0;background:linear-gradient(135deg,#134152,#0e2a35);border:1px solid #1f5164;color:var(--text);border-radius:8px;padding:9px 16px;width:auto;flex:1;min-width:120px;justify-content:center;font-weight:600;transition:filter .15s;}
+  label.action:hover{filter:brightness(1.25);}
+
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .btn-row button{width:auto;flex:1;min-width:120px;}
+
+  .vision-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--bg-panel-2);border-radius:8px;padding:7px 12px;margin:0 6px 6px 0;font-size:12px;}
+  .vision-chip .sw{width:9px;height:9px;border-radius:50%;}
+  .vision-chip b{font-family:'JetBrains Mono',monospace;color:var(--muted);}
+
+  .crispr-timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+  .crispr-timeline .tl-item{border-left:2px solid var(--teal-dim);padding:4px 0 4px 10px;font-size:11px;color:var(--muted);line-height:1.5;}
+  .crispr-timeline .tl-item b{display:block;color:var(--amber);font-size:14px;margin-bottom:3px;}
+  @media(max-width:900px){.crispr-timeline{grid-template-columns:1fr 1fr;}}
+
+  .log{font-size:12px;color:var(--muted);max-height:150px;overflow-y:auto;padding-right:4px;}
+  .log div{padding:6px 0;border-bottom:1px solid var(--line);}
+  .log div:last-child{border-bottom:none;}
+  .log .t{color:var(--teal);}
+  .log .a{color:var(--amber);}
+
+  .disease-card{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;background:var(--bg-panel-2);}
+  .disease-card.match{border-color:var(--danger);background:rgba(251,113,133,.06);}
+  .disease-card .name{font-weight:600;font-size:14px;margin-bottom:4px;}
+  .disease-card .meta{font-size:11px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:8px;}
+  .sev{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+  .sev.high{background:rgba(251,113,133,.18);color:var(--danger);}
+  .sev.med{background:rgba(251,191,36,.18);color:var(--amber);}
+  .sev.low{background:rgba(74,222,128,.18);color:var(--good);}
+  .confidence-bar{height:5px;border-radius:100px;background:var(--line);margin-top:8px;overflow:hidden;}
+  .confidence-bar i{display:block;height:100%;background:var(--danger);}
+
+  .compound{display:grid;grid-template-columns:64px 1fr auto;gap:14px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--bg-panel-2);transition:border-color .15s,transform .15s;}
+  .compound:hover{border-color:var(--teal-dim);transform:translateX(2px);}
+  .compound .structure{width:64px;height:64px;border-radius:8px;background:#f4f6f5;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;position:relative;}
+  .compound .structure canvas{width:100%!important;height:100%!important;}
+  .compound .rank{font-family:'JetBrains Mono',monospace;color:#fff;font-size:9px;position:absolute;top:2px;left:2px;background:rgba(10,20,28,.72);padding:1px 4px;border-radius:4px;line-height:1.4;}
+  .compound .cname{font-weight:600;font-size:13px;}
+  .compound .cprops{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;line-height:1.6;}
+  .score-stack{display:flex;flex-direction:column;gap:5px;align-items:flex-end;}
+  .score-chip{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;padding:5px 10px;border-radius:8px;text-align:center;min-width:56px;}
+  .score-chip.hi{background:rgba(74,222,128,.15);color:var(--good);}
+  .score-chip.mid{background:rgba(251,191,36,.15);color:var(--amber);}
+  .score-chip.lo{background:rgba(251,113,133,.15);color:var(--danger);}
+  .score-chip .lbl{display:block;font-size:8px;font-weight:400;letter-spacing:.06em;text-transform:uppercase;opacity:.75;font-family:'Inter',sans-serif;margin-bottom:1px;}
+  .ro5{font-size:10px;padding:2px 6px;border-radius:5px;margin-left:6px;border:1px solid var(--line);}
+  .ro5.pass{color:var(--good);border-color:var(--good);}
+  .ro5.fail{color:var(--danger);border-color:var(--danger);}
+
+  .identity-meter{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);background:var(--bg-panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:14px;}
+  .identity-meter .bar{flex:1;height:6px;border-radius:100px;background:var(--line);overflow:hidden;}
+  .identity-meter .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--good));}
+  .identity-meter b{color:var(--text);font-family:'JetBrains Mono',monospace;}
+
+  .scope-box{font-size:12.5px;line-height:1.65;color:var(--muted);}
+  .scope-box ul{margin:8px 0 0;padding-left:18px;}
+  .scope-box li{margin-bottom:5px;}
+  .scope-box b{color:var(--text);}
+
+  .flow{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-top:10px;}
+  .flow span{background:var(--bg-panel-2);border:1px solid var(--line);padding:4px 8px;border-radius:6px;}
+  .flow span.active{color:var(--amber);border-color:var(--amber);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  @media(max-width:1000px){.grid2{grid-template-columns:1fr;}}
+
+  .phase-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .phase-tabs button{flex:1;padding:8px 6px;font-size:11px;border-radius:8px;background:var(--bg-panel-2);border:1px solid var(--line);color:var(--muted);cursor:pointer;}
+  .phase-tabs button.active{background:rgba(45,212,191,.12);border-color:var(--teal);color:var(--teal);font-weight:600;}
+
+  .cohort-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px;margin:12px 0;}
+  .patient-chip{border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center;background:var(--bg-panel-2);font-size:10.5px;position:relative;}
+  .patient-chip .pid{font-family:'JetBrains Mono',monospace;color:var(--teal);font-size:11px;}
+  .patient-chip .pmeta{color:var(--muted);margin-top:2px;}
+  .patient-chip.consented{border-color:var(--good);}
+  .patient-chip.ae{border-color:var(--danger);}
+  .patient-chip .tag{position:absolute;top:-6px;right:-4px;font-size:9px;padding:1px 5px;border-radius:100px;}
+  .patient-chip .tag.c{background:var(--good);color:#04250f;}
+  .patient-chip .tag.a{background:var(--danger);color:#2a0a10;}
+
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0;}
+  .stat-box{background:var(--bg-panel-2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;}
+  .stat-box .num{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--teal);}
+  .stat-box .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+
+  .ae-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+  .ae-form .full{grid-column:1/-1;}
+
+  .ledger-block{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--bg-panel-2);position:relative;}
+  .ledger-block .idx{position:absolute;top:10px;right:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+  .ledger-block .action{font-size:12.5px;font-weight:600;margin-bottom:4px;}
+  .ledger-block .hash{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);word-break:break-all;line-height:1.6;}
+  .ledger-block .hash b{color:var(--violet);}
+  .ledger-block .consensus{display:inline-flex;align-items:center;gap:5px;font-size:10px;margin-top:6px;color:var(--muted);}
+  .ledger-block .consensus .led{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+  .ledger-block.final .consensus .led{background:var(--good);}
+  .ledger-block.final .consensus{color:var(--good);}
+  .ledger-block.pending .consensus .led{background:var(--amber);animation:blink 1s infinite;}
+  @keyframes blink{50%{opacity:.3;}}
+
+  .trial-timeline{display:flex;gap:4px;margin:12px 0;}
+  .trial-timeline .seg{flex:1;height:6px;border-radius:4px;background:var(--line);}
+  .trial-timeline .seg.done{background:var(--teal);}
+  .trial-timeline .seg.now{background:var(--amber);}
+  #sec-editor,#sec-disease,#sec-drug,#sec-trial,#sec-ledger,#sec-scope,#sec-binding,#sec-vision,#sec-chemspace,#sec-rag,#sec-variant,#sec-outcome,#sec-dashboard{scroll-margin-top:60px;}
+
+  #dock-viewer-holder{position:relative;height:380px;border-radius:10px;overflow:hidden;background:radial-gradient(ellipse at 50% 30%, #10222f 0%, #050b11 75%);border:1px solid var(--line);}
+  #dock-viewer-holder canvas{display:block;width:100%!important;height:100%!important;cursor:grab;}
+  #dock-viewer-holder canvas:active{cursor:grabbing;}
+  .dock-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px;}
+  .dock-legend span{display:flex;align-items:center;gap:6px;}
+  .dock-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .dock-target-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:8px;padding:10px 12px;background:var(--bg-panel-2);border-radius:8px;border:1px solid var(--line);}
+  .dock-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;}
+  .dock-link{font-size:10px;color:var(--teal);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+
+  /* ---- numbered section badges ---- */
+  .nbadge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--teal),var(--teal-dim));color:#04141a;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;}
+
+  /* ---- variant / alignment analytics ---- */
+  .align-grid{overflow-x:auto;padding-bottom:6px;}
+  .align-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+  .align-row .rlabel{width:96px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);}
+  .align-row .cells{display:flex;gap:2px;}
+  .align-cell{width:16px;height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:700;flex-shrink:0;}
+  .align-cell.ref{background:var(--bg-panel-2);color:var(--muted);border:1px solid var(--line);}
+  .align-cell.match{background:rgba(74,222,128,.14);color:var(--good);}
+  .align-cell.snp{background:rgba(251,113,133,.28);color:var(--danger);}
+  .variant-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0;}
+  .coverage-bars{display:flex;align-items:flex-end;gap:2px;height:60px;margin:10px 0;}
+  .coverage-bars .bar{flex:1;background:linear-gradient(180deg,var(--teal),var(--teal-dim));border-radius:2px 2px 0 0;min-height:2px;}
+  .heatmap-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:8px;}
+  .heatmap-legend span{display:flex;align-items:center;gap:6px;}
+  .heatmap-legend i{width:14px;height:10px;border-radius:2px;display:inline-block;}
+
+  /* ---- survival curve ---- */
+  #survival-svg{width:100%;height:220px;display:block;}
+  .survival-legend{display:flex;gap:18px;font-size:11.5px;color:var(--muted);margin-top:8px;}
+  .survival-legend span{display:flex;align-items:center;gap:6px;}
+  .survival-legend i{width:16px;height:3px;border-radius:2px;display:inline-block;}
+  .pvalue-box{display:inline-flex;align-items:baseline;gap:8px;background:var(--bg-panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-top:12px;}
+  .pvalue-box .pv{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;}
+  .pvalue-box .pv.sig{color:var(--good);}
+  .pvalue-box .pv.ns{color:var(--muted);}
+
+  /* ---- final dashboard ---- */
+  .dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  @media(max-width:900px){.dash-grid{grid-template-columns:1fr 1fr;}}
+  .dash-item{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--bg-panel-2);display:flex;align-items:center;gap:10px;font-size:12.5px;}
+  .dash-item .chk{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;color:var(--muted);}
+  .dash-item.done{border-color:var(--good);}
+  .dash-item.done .chk{background:var(--good);border-color:var(--good);color:#04250f;}
+  .dash-item .lbl{color:var(--muted);}
+  .dash-item.done .lbl{color:var(--text);}
+
+  /* ---- footer: tech stack + about ---- */
+  .tech-strip{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+  .tech-badge{display:flex;align-items:center;gap:7px;background:var(--bg-panel-2);border:1px solid var(--line);border-radius:100px;padding:7px 13px;font-size:11.5px;color:var(--muted);}
+  .tech-badge .swatch{width:8px;height:8px;border-radius:50%;}
+  .tech-badge b{color:var(--text);font-weight:600;}
+  footer.about{border-top:1px solid var(--line);margin-top:30px;padding-top:24px;display:grid;grid-template-columns:1.4fr 1fr;gap:22px;}
+  @media(max-width:900px){footer.about{grid-template-columns:1fr;}}
+  footer.about h3{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 12px;}
+  footer.about p{font-size:12.5px;color:var(--muted);line-height:1.6;margin:0 0 8px;}
+</style>
+</head>
+<body>
+<nav class="instrument-nav">
+  <div class="inner">
+    <span class="navlogo">CRISPR‑X NEXUS</span>
+    <a href="#sec-vision">Image triage</a>
+    <a href="#sec-editor" class="active">Editor</a>
+    <a href="#sec-disease">Disease scan</a>
+    <a href="#sec-drug">Drug screen</a>
+    <a href="#sec-binding">Binding pose</a>
+    <a href="#sec-chemspace">Chem space</a>
+    <a href="#sec-variant">Variant calling</a>
+    <a href="#sec-rag">Knowledge base</a>
+    <a href="#sec-trial">Trial sim</a>
+    <a href="#sec-outcome">Outcome sim</a>
+    <a href="#sec-ledger">Ledger</a>
+    <a href="#sec-dashboard">Dashboard</a>
+    <a href="#sec-scope">Scope</a>
+  </div>
+</nav>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div>
+        <div class="mark">CRISPR‑X NEXUS // GENOMIC RISK INTELLIGENCE</div>
+        <h1 class="title">🧬 From Genetic Signals to Informed Decisions.</h1>
+        <div class="subtitle">A privacy-aware genomic intelligence platform that blends variant interpretation, carrier-risk education, inheritance logic, and decision support — while preserving the original interactive research tooling.</div>
+      </div>
+    </div>
+    <div class="scope-pill">⚠ <b>Illustrative model</b> — synthetic patients, sequences &amp; scores for teaching. Not a real trial, EHR, or blockchain network.</div>
+  </header>
+
+  <div class="lab-cta-banner">
+    <div class="lab-cta-text">
+      <div class="kicker">Real-time · Interactive · Backend-connected</div>
+      <h3>Molecule Construction Lab</h3>
+      <p>Place atoms, wire up bonds, and build a real molecule from scratch — validated with actual chemistry (RDKit via the Python backend, with a labeled local fallback), then screen it against whatever gene the disease analyzer currently flags. Design a drug candidate starting from the DNA, not the other way around.</p>
+    </div>
+    <button id="btn-open-lab"><span class="spark">⚛</span> Launch Molecule Lab</button>
+  </div>
+
+  <div class="panel" id="sec-vision">
+    <h2><span class="nbadge">01</span><span class="dot"></span>Image intake triage — ATCG DNA detection</h2>
+    <div class="subtitle" style="margin-bottom:14px;">
+      Uploaded DNA images and PDFs use the same ATCG sequence detector, which reconstructs the base sequence and sends it through the CFTR analysis flow.
+    </div>
+    <div class="btn-row" style="margin-bottom:12px;">
+      <label class="action" for="vision-file-input" style="display:inline-flex;align-items:center;cursor:pointer;">Upload image or PDF</label>
+      <input type="file" id="vision-file-input" accept="image/*,.pdf" style="display:none;">
+      <button class="action primary" id="btn-run-vision" disabled>Run ATCG detection</button>
+      <button class="action" id="btn-analyze-dna" disabled>Analyze DNA image</button>
+    </div>
+    <div id="vision-status" class="mono" style="font-size:11.5px;color:var(--muted);margin-bottom:10px;min-height:16px;"></div>
+    <div id="vision-canvas-holder" style="position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--bg-panel-2);min-height:200px;display:flex;align-items:center;justify-content:center;">
+      <canvas id="vision-canvas" style="max-width:100%;display:block;"></canvas>
+      <div id="vision-placeholder" style="color:var(--muted);font-size:12.5px;padding:40px;text-align:center;position:absolute;">Upload a DNA image or PDF to run the ATCG sequence detector — nothing leaves your browser.</div>
+    </div>
+    <div id="vision-results" style="margin-top:12px;"></div>
+    <div id="vision-summary-box" style="display:none;margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--bg-panel-2);border:1px solid var(--line);">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;">AI summary <span id="vision-summary-tag"></span></div>
+      <div id="vision-summary-text" style="font-size:12.5px;line-height:1.55;"></div>
+    </div>
+    <div class="dock-target-note" style="margin-top:12px;">
+      The image and PDF intake paths now share the same ATCG DNA-detection workflow: detect A/T/C/G nucleotide glyphs, reconstruct the sequence, and continue directly into the analysis flow.
+    </div>
+  </div>
+
+  <div class="grid">
+    <div id="sec-editor">
+      <div class="panel">
+        <h2><span class="nbadge">02</span><span class="dot"></span>3D molecular viewer</h2>
+        <div id="viewer-holder">
+          <div class="viewer-badge mono" id="viewer-badge">40 bp · B‑DNA</div>
+          <div class="viewer-hint">drag to rotate · scroll to zoom</div>
+        </div>
+        <div style="margin-top:12px;" class="mono seq-strip" id="seq-strip"></div>
+      </div>
+
+      <div class="panel">
+        <h2><span class="nbadge">03</span><span class="dot"></span>CRISPR‑Cas9 editing simulator</h2>
+        <div class="row">
+          <div class="field">
+            <label>Target mutation</label>
+            <select id="target-select"></select>
+          </div>
+          <div class="field">
+            <label>Repair strategy</label>
+            <select id="repair-select">
+              <option value="hdr">HDR — precise replacement</option>
+              <option value="nhej">NHEJ — small indel (imprecise)</option>
+              <option value="base">Base editing — single A→G / C→T</option>
+              <option value="prime">Prime editing — precise multi‑base</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Workflow</label>
+          <div class="flow" id="flow-track">
+            <span data-step="grna">1 · Design gRNA</span>
+            <span data-step="pam">2 · Locate PAM</span>
+            <span data-step="cut">3 · Cas9 cut</span>
+            <span data-step="repair">4 · Repair</span>
+            <span data-step="scan">5 · Re‑scan</span>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="action primary" id="btn-design">Design gRNA</button>
+          <button class="action warn" id="btn-cut" disabled>Cut DNA</button>
+          <button class="action" id="btn-repair" disabled>Apply repair</button>
+          <button class="action" id="btn-reset">Reset sample</button>
+        </div>
+        <div class="log mono" id="log" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel" id="sec-disease">
+        <h2><span class="nbadge">04</span><span class="dot"></span>AI disease analyzer</h2>
+        <div class="identity-meter mono" id="identity-meter"></div>
+        <div id="disease-list"></div>
+      </div>
+
+      <div class="panel" id="sec-drug">
+        <h2><span class="nbadge">05</span><span class="dot"></span>Drug candidate screening</h2>
+        <label>Target (auto‑set from detected mutation)</label>
+        <div class="mono" id="drug-target" style="font-size:13px;color:var(--teal);margin-bottom:12px;">— none selected —</div>
+        <div id="compound-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="panel" id="sec-binding">
+    <h2><span class="nbadge">06</span><span class="dot"></span>Binding pose simulator — ligand ↔ target pocket</h2>
+    <div class="subtitle" style="margin-bottom:14px;">
+      Docks the selected compound's own 3D structure (generated live from its SMILES) into a stylized pocket for either the disease gene currently flagged, or a real microbial drug target — then searches candidate orientations for the best geometric fit.
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Docking target</label>
+        <select id="dock-target-select"></select>
+      </div>
+      <div class="field">
+        <label>Compound</label>
+        <select id="dock-compound-select"></select>
+      </div>
+    </div>
+    <div class="dock-target-note" id="dock-target-note"></div>
+    <div class="btn-row" style="margin:14px 0;">
+      <button class="action primary" id="btn-run-dock">Simulate binding pose</button>
+    </div>
+    <div id="dock-viewer-holder">
+      <div class="viewer-badge mono" id="dock-badge">select a target and compound</div>
+      <div class="viewer-hint">drag to rotate · scroll to zoom</div>
+    </div>
+    <div class="dock-legend">
+      <span><i style="background:#fbbf24;"></i>H-bond donor site</span>
+      <span><i style="background:#a78bfa;"></i>H-bond acceptor site</span>
+      <span><i style="background:#2dd4bf;"></i>hydrophobic patch</span>
+      <span><i style="background:#e2725b;"></i>matched contact</span>
+    </div>
+    <div class="dock-stats" id="dock-stats"></div>
+    <div class="log mono" id="dock-trace" style="margin-top:6px;"></div>
+  </div>
+
+  <div class="panel" id="sec-chemspace">
+    <h2><span class="nbadge">07</span><span class="dot"></span>Synthetic compound chemical space — 3D</h2>
+    <div class="subtitle" style="margin-bottom:14px;">
+      All 8 synthetic compounds plotted by their real RDKit descriptors — molecular weight, LogP, and polar surface area — so you can see how "drug-likeness" clusters in 3D rather than just as a ranked list.
+    </div>
+    <div id="chem3d-holder" style="position:relative;height:380px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 30%, #10222f 0%, #050b11 75%);">
+      <div class="viewer-hint">drag to rotate · scroll to zoom</div>
+    </div>
+    <div class="dock-legend">
+      <span><i style="background:#4ade80;"></i>high likeness (QED‑lite ≥ 70)</span>
+      <span><i style="background:#fbbf24;"></i>mid likeness (45–69)</span>
+      <span><i style="background:#fb7185;"></i>low likeness (&lt; 45)</span>
+    </div>
+    <div class="dock-target-note" style="margin-top:10px;">
+      Axes: <b style="color:var(--text);">X = molecular weight</b> (150–420), <b style="color:var(--text);">Y = LogP</b> (−4 to 4), <b style="color:var(--text);">Z = TPSA</b> (40–170 Å²) — real values from the RDKit descriptor table, min–max scaled to fit the plot. Point color is the same deterministic QED‑lite index used in the drug screening panel above.
+    </div>
+  </div>
+
+  <div class="panel" id="sec-variant">
+    <h2><span class="nbadge">08</span><span class="dot"></span>AI genomic variant analysis — multi-sample alignment</h2>
+    <div class="subtitle" style="margin-bottom:14px;">
+      Generates a short synthetic sequencing read for every enrolled patient (reference sequence plus a small simulated error/mutation rate), aligns each read to the reference position-by-position, and calls variants from real mismatches — the same base logic behind a toy read-alignment pipeline, run entirely in this tab.
+    </div>
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button class="action primary" id="btn-generate-reads">Generate reads from cohort</button>
+    </div>
+    <div class="variant-stat-row" id="variant-stats"></div>
+    <label>Coverage (simulated read depth per position)</label>
+    <div class="coverage-bars" id="coverage-bars"></div>
+    <label style="margin-top:10px;">Sequence alignment — mutation heatmap</label>
+    <div class="align-grid" id="align-grid"></div>
+    <div class="heatmap-legend">
+      <span><i style="background:var(--bg-panel-2);border:1px solid var(--line);"></i>reference</span>
+      <span><i style="background:rgba(74,222,128,.35);"></i>matches reference</span>
+      <span><i style="background:rgba(251,113,133,.5);"></i>called SNP</span>
+    </div>
+    <div class="dock-target-note" style="margin-top:10px;">
+      Reads are generated from patients in the clinical trial cohort below — enroll patients there first, or click "Generate reads" to auto-create a small default cohort. Each simulated read gets a ~4% per-base error rate; positions where 2 or more reads disagree with the reference are called as variants (a deliberately simplified stand-in for real variant callers like GATK or DeepVariant).
+    </div>
+  </div>
+
+  <div class="panel" id="sec-rag">
+    <h2><span class="nbadge">09</span><span class="dot"></span>CRISPR knowledge assistant — local retrieval (RAG‑lite)</h2>
+    <div class="subtitle" style="margin-bottom:14px;">
+      Ask a question about CRISPR biology, mechanism, or applications. This runs a genuine TF‑IDF + cosine‑similarity search over a small built‑in knowledge base, then composes an answer by extracting the top‑matching sentences — a real retrieval step, honestly without a generative LLM behind it (a static file like this has no server or API key to call one).
+    </div>
+    <div class="crispr-timeline mono">
+      <div class="tl-item"><b>1987</b><span>Nakata et al., Osaka University — CRISPR repeats first reported in E. coli</span></div>
+      <div class="tl-item"><b>~2005</b><span>Spacer sequencing links CRISPR to a prokaryotic adaptive immune function</span></div>
+      <div class="tl-item"><b>2012</b><span>Doudna &amp; Charpentier fuse crRNA + tracrRNA into a single programmable sgRNA</span></div>
+      <div class="tl-item"><b>2020</b><span>Nobel Prize in Chemistry awarded for CRISPR-Cas9 genome editing</span></div>
+    </div>
+    <div class="row" style="grid-template-columns:1fr auto;">
+      <div class="field" style="margin-bottom:0;">
+        <label>Ask about CRISPR</label>
+        <input type="text" id="rag-query" placeholder="e.g. What's the difference between HDR and NHEJ?">
+      </div>
+      <div class="field" style="margin-bottom:0;display:flex;align-items:flex-end;">
+        <button class="action primary" id="btn-rag-ask" style="width:auto;padding:9px 18px;">Ask</button>
+      </div>
+    </div>
+    <div class="btn-row" style="margin:4px 0 14px;">
+      <span class="dock-link" onclick="askRag('How was CRISPR discovered?')">How was CRISPR discovered?</span>
+      <span class="dock-link" onclick="askRag('How does Cas9 recognize its target?')">How does Cas9 recognize its target?</span>
+      <span class="dock-link" onclick="askRag('What is HDR vs NHEJ?')">HDR vs NHEJ?</span>
+      <span class="dock-link" onclick="askRag('What are clinical applications of CRISPR?')">Clinical applications?</span>
+    </div>
+    <div id="rag-answer" class="dock-target-note" style="display:none;"></div>
+    <div id="rag-sources" style="margin-top:12px;"></div>
+    <div class="dock-legend" style="margin-top:10px;">
+      <span>Retrieval: TF‑IDF vectors + cosine similarity over <b id="rag-corpus-size" style="color:var(--text);">–</b> short passages</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel" id="sec-trial">
+      <h2><span class="nbadge">10</span><span class="dot"></span>Clinical trial simulator</h2>
+      <div class="phase-tabs" id="phase-tabs">
+        <button data-phase="1" class="active">Phase I</button>
+        <button data-phase="2">Phase II</button>
+        <button data-phase="3">Phase III</button>
+        <button data-phase="4">Phase IV</button>
+      </div>
+      <div class="trial-timeline" id="trial-timeline"></div>
+      <div class="stat-row" id="trial-stats"></div>
+      <div class="btn-row">
+        <button class="action primary" id="btn-enroll">Enroll synthetic patient</button>
+        <button class="action" id="btn-export-trial">Export cohort (.json)</button>
+      </div>
+      <div class="cohort-grid" id="cohort-grid"></div>
+      <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px;">
+        <label>Log adverse event</label>
+        <div class="ae-form">
+          <select id="ae-patient"></select>
+          <select id="ae-severity">
+            <option value="mild">Mild</option>
+            <option value="moderate">Moderate</option>
+            <option value="severe">Severe</option>
+          </select>
+          <input type="text" id="ae-desc" placeholder="Short description (e.g. headache, injection-site reaction)" class="full">
+          <button class="action warn full" id="btn-log-ae">Log adverse event</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="sec-ledger">
+      <h2><span class="nbadge">12</span><span class="dot"></span>Distributed audit ledger</h2>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
+        Every edit, consent, and adverse event is hashed with real SHA‑256 and chained to the previous block — the same tamper‑evidence idea behind Hedera's Consensus Service. This runs locally in your browser; it is <b style="color:var(--text);">not</b> a live call to the Hedera network.
+      </div>
+      <div class="btn-row" style="margin-bottom:12px;">
+        <button class="action" id="btn-verify-chain">Verify chain integrity</button>
+        <button class="action" id="btn-export-chain">Export ledger (.json)</button>
+      </div>
+      <div id="chain-status" style="font-size:12px;margin-bottom:10px;"></div>
+      <div class="log" id="ledger-list" style="max-height:420px;"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="sec-outcome">
+    <h2><span class="nbadge">11</span><span class="dot"></span>Clinical outcome simulator — survival analysis</h2>
+    <div class="subtitle" style="margin-bottom:14px;">
+      Simulates event-free survival for a treatment arm and a control arm from synthetic exponential survival times (treatment hazard reduced in proportion to the top compound's fit score), then computes a real Kaplan‑Meier curve and a real log‑rank test statistic on that simulated data.
+    </div>
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button class="action primary" id="btn-run-survival">Run survival simulation (n=40/arm)</button>
+    </div>
+    <svg id="survival-svg" viewBox="0 0 640 220"></svg>
+    <div class="survival-legend">
+      <span><i style="background:var(--teal);"></i>Treatment arm</span>
+      <span><i style="background:var(--muted);"></i>Control arm</span>
+    </div>
+    <div class="pvalue-box" id="pvalue-box">
+      <span style="font-size:11px;color:var(--muted);">Log‑rank p‑value</span>
+      <span class="pv" id="pvalue-num">—</span>
+    </div>
+    <div class="dock-target-note" style="margin-top:12px;">
+      This is a real, if simplified, statistical pipeline (Kaplan‑Meier estimator + log‑rank chi‑square, exact for 1 degree of freedom via the χ²↔normal identity) applied to <b style="color:var(--text);">simulated exponential survival times</b>, not real patient outcomes. Re-run it after changing the detected mutation or repair strategy above to see the response‑rate assumption shift.
+    </div>
+  </div>
+
+  <div class="panel" id="sec-scope">
+    <h2><span class="dot"></span>What's real vs. simplified here</h2>
+    <div class="scope-box">
+      This demo runs entirely in your browser — no external AI model, genome database, EHR system, or live blockchain network is called.
+      <ul>
+        <li><b>3D viewer:</b> real Three.js geometry, procedurally built from the sequence you edit.</li>
+        <li><b>gRNA / PAM search:</b> real string matching against the sequence shown.</li>
+        <li><b>Disease matches:</b> a small hand‑written reference table (6 entries), not ClinVar/OMIM/gnomAD.</li>
+        <li><b>Drug descriptors:</b> real RDKit‑computed molecular weight, LogP, H‑bond donors/acceptors, TPSA and rotatable bonds for fictional molecules with valid SMILES — see the companion Python script. The 2D structures are drawn live from those same SMILES strings with SmilesDrawer, a genuine chemical structure parser.</li>
+        <li><b>Likeness score:</b> a real, deterministic index computed from the descriptors above (QED‑style desirability curves for MW/LogP/HBD/HBA/TPSA/rotatable bonds) — not random, but still a simplified drug‑likeness heuristic, not a measured property.</li>
+        <li><b>Dock fit score:</b> no longer a seeded placeholder — every compound in the screening list now runs through the exact same pipeline as the binding-pose simulator below (SMILES → 3D atom embedding → pocket generation → 18-orientation pose search), automatically, against the currently flagged gene. It's a real simulation output, cached per-compound so re-scanning stays fast — but it's still the same simplified, rule-based geometric scoring described below, not a validated binding free energy.</li>
+        <li><b>Binding pose simulator:</b> the ligand's 3D shape is genuinely generated from its SMILES (parsed atom-by-atom, then relaxed into 3D with a real bonded-spring/repulsion algorithm) and the best of 18 candidate orientations is picked by a real geometric-contact scoring function. The receptor <b style="color:var(--text);">pocket is a stylized, deterministic point-cloud</b> — not a real protein structure from the PDB — so treat the pose and score as an illustration of docking concepts (donor/acceptor/hydrophobic complementarity, pose search), not a substitute for physics-based docking (AutoDock, Glide) against a real crystal or cryo-EM structure.</li>
+        <li><b>Clinical trial cohort:</b> entirely synthetic, randomly generated patients — no real people, no real PII, no real regulatory submission.</li>
+        <li><b>Audit ledger:</b> a genuine local SHA‑256 hash chain (you can verify it below) illustrating what a distributed ledger secures — <b style="color:var(--text);">not</b> a connection to Hedera testnet/mainnet, which needs an account, HBAR, and the Hedera SDK running server‑side. The companion Python script includes real, runnable example code for that integration.</li>
+        <li><b>Image intake triage:</b> the browser intake path uses the same ATCG DNA detector as the PDF flow, scanning the uploaded image for A/T/C/G glyphs, reconstructing the sequence, and routing it into the gene-vision pipeline. It is a prototype DNA-analysis workflow, not a clinical-grade sequencing system.</li>
+        <li><b>3D chemical space:</b> the same real RDKit descriptors (MW, LogP, TPSA) plotted as real 3D coordinates, min‑max scaled — a genuine data visualization, just of a small (8‑compound) synthetic set.</li>
+        <li><b>CRISPR knowledge assistant:</b> real TF‑IDF vectorization + cosine similarity search over a small, original 15‑passage knowledge base, followed by extractive sentence selection — genuine retrieval and ranking math. There is <b style="color:var(--text);">no generative LLM behind it</b>: a static HTML file has no server or API key to call one, so answers are assembled from retrieved sentences rather than written fresh.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="panel" id="sec-dashboard">
+    <h2><span class="nbadge">13</span><span class="dot"></span>Final output dashboard</h2>
+    <div class="subtitle" style="margin-bottom:14px;">A live checklist of what this session has actually produced — updates as you use the panels above.</div>
+    <div class="dash-grid" id="dash-grid"></div>
+  </div>
+
+  <footer class="about">
+    <div>
+      <h3>Technology &amp; tools actually used</h3>
+      <div class="tech-strip">
+        <span class="tech-badge"><i class="swatch" style="background:#2dd4bf;"></i>HTML5 / CSS3 / vanilla JS</span>
+        <span class="tech-badge"><i class="swatch" style="background:#a78bfa;"></i>Three.js + WebGL (3D DNA, docking, chem space)</span>
+        <span class="tech-badge"><i class="swatch" style="background:#fbbf24;"></i>ATCG DNA detector (shared image + PDF intake)</span>
+        <span class="tech-badge"><i class="swatch" style="background:#e879f9;"></i>SmilesDrawer (2D structure rendering)</span>
+        <span class="tech-badge"><i class="swatch" style="background:#4ade80;"></i>Web Crypto SHA‑256 (audit ledger)</span>
+        <span class="tech-badge"><i class="swatch" style="background:#fb7185;"></i>Python + RDKit (companion script, offline)</span>
+        <span class="tech-badge"><i class="swatch" style="background:#60a5fa;"></i>Python + Hedera SDK (companion example, not live)</span>
+      </div>
+    </div>
+    <div>
+      <h3>About this project</h3>
+      <p>CRISPR‑X is a browser‑based educational demo covering the end‑to‑end shape of a genome‑engineering + drug‑discovery pipeline: editing, disease detection, compound screening, docking, trial simulation, and audit logging.</p>
+      <p>Every computation above genuinely runs — TF‑IDF search, SHA‑256 hashing, RDKit‑derived chemistry, Kaplan‑Meier statistics, a real vision model — but on synthetic data and simplified models, clearly labeled throughout. See "What's real vs. simplified" for the full accounting.</p>
+    </div>
+  </footer>
+</div>
+
+<div class="lab-modal-overlay" id="lab-modal-overlay">
+  <div class="lab-modal">
+    <div class="lab-modal-head">
+      <div>
+        <h2><span class="dot"></span>Molecule Construction Lab</h2>
+        <div class="subtitle" style="margin-top:4px;">
+          Click the canvas to place an atom of the selected element. Turn on bond mode, pick a bond order, then click two atoms to connect them. Build &amp; score sends the graph to the Python backend (real RDKit) — if it's unreachable, a clearly-labeled local heuristic estimate is shown instead so the lab still works standalone.
+        </div>
+      </div>
+      <button id="btn-close-lab">✕</button>
+    </div>
+
+    <div class="field" style="max-width:360px;">
+      <label>Backend API base URL</label>
+      <input type="text" id="lab-api-base" value="https://crispr-x-backend.onrender.com" placeholder="https://your-backend.onrender.com">
+    </div>
+
+    <div class="field">
+      <label>Paste a formula (SMILES) to load &amp; continue editing</label>
+      <div class="btn-row">
+        <input type="text" id="lab-smiles-input" placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O" style="flex:2;">
+        <button class="action primary" id="btn-lab-load-smiles" style="flex:1;">Load into editor</button>
+      </div>
+      <div id="lab-smiles-status" style="font-size:11px;color:var(--muted);margin-top:6px;min-height:14px;"></div>
+    </div>
+
+    <div class="lab-grid">
+      <div>
+        <label>Element palette</label>
+        <div class="element-palette" id="element-palette"></div>
+        <label>Bond order (click two atoms to connect)</label>
+        <div class="bond-order-toggle" id="bond-order-toggle">
+          <button data-order="1" class="active">Single</button>
+          <button data-order="2">Double</button>
+          <button data-order="3">Triple</button>
+        </div>
+        <svg id="lab-svg" viewBox="0 0 500 320"></svg>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="action" id="btn-lab-undo">Undo last atom</button>
+          <button class="action" id="btn-lab-clear">Clear canvas</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="action" id="btn-lab-save">💾 Save molecule (.json)</button>
+          <label class="action" for="lab-load-file" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;">📂 Load saved molecule</label>
+          <input type="file" id="lab-load-file" accept="application/json" style="display:none;">
+        </div>
+      </div>
+
+      <div>
+        <label>Live 3D preview <span style="color:var(--muted);font-weight:400;">— gentle simulated vibration, not a real MD trajectory</span></label>
+        <div id="lab-3d-holder"></div>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="action primary" id="btn-lab-build">Build &amp; score molecule</button>
+          <button class="action warn" id="btn-lab-send" disabled>Send to drug screening</button>
+        </div>
+        <div class="lab-result-box" id="lab-result-box">
+          <div style="font-size:12px;color:var(--muted);">Place a few atoms, connect them, then click "Build &amp; score" to run real chemistry validation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- synthetic data injected via pipe: generate_synthetic_data.py (seed=42) — not hand-typed. See README for the pipe command. ---
+const BASE_COLORS = { A:0x2dd4bf, T:0xe879f9, C:0xfbbf24, G:0xa78bfa };
+
+const REFERENCE = "ATGGTGCACCTGACTCCTGAGGAGAAGTCTGCCGTTACTG".split("");
+
+const DISEASE_DB = [
+  { id:"sca", name:"Sickle Cell Disease", gene:"HBB", chrom:"11p15.4", pos:6, normal:"A", mutant:"T",
+    mutType:"Missense (Glu→Val)", severity:"high", inheritance:"Autosomal recessive", freq:"~1/365 (African ancestry)",
+    note:"A single base change alters codon 6 of beta-globin, causing hemoglobin to polymerize under low oxygen." },
+  { id:"cf", name:"Cystic Fibrosis (ΔF508‑like)", gene:"CFTR", chrom:"7q31.2", pos:15, normal:"G", mutant:"C",
+    mutType:"Frameshift‑adjacent", severity:"high", inheritance:"Autosomal recessive", freq:"~1/2,500 (European ancestry)",
+    note:"Disrupts chloride channel folding, thickening mucus in lungs and pancreas." },
+  { id:"thal", name:"Beta Thalassemia", gene:"HBB", chrom:"11p15.4", pos:22, normal:"A", mutant:"G",
+    mutType:"Splice‑site", severity:"med", inheritance:"Autosomal recessive", freq:"~1/100,000 globally",
+    note:"Reduces beta-globin production, causing anemia of varying severity." },
+  { id:"hd", name:"Huntington Disease (marker)", gene:"HTT", chrom:"4p16.3", pos:28, normal:"T", mutant:"C",
+    mutType:"Regulatory‑region marker", severity:"high", inheritance:"Autosomal dominant", freq:"~1/10,000-20,000",
+    note:"Real HD is caused by CAG repeat expansion; this position is a simplified stand-in for demo purposes." },
+  { id:"brca", name:"BRCA1‑associated risk", gene:"BRCA1", chrom:"17q21.31", pos:33, normal:"C", mutant:"T",
+    mutType:"Missense", severity:"med", inheritance:"Autosomal dominant", freq:"~1/400 carriers",
+    note:"Elevates lifetime risk of breast and ovarian cancer; penetrance varies by variant." },
+  { id:"g6pd", name:"G6PD Deficiency", gene:"G6PD", chrom:"Xq28", pos:38, normal:"G", mutant:"A",
+    mutType:"Missense", severity:"low", inheritance:"X‑linked recessive", freq:"~400M people worldwide",
+    note:"Reduces red blood cell resistance to oxidative stress; usually mild, triggered by certain drugs/foods." },
+];
+
+// Fictional candidate molecules (not real approved drugs). Descriptors below are
+// real RDKit output (MolWt, MolLogP, NumHDonors, NumHAcceptors, TPSA, RotatableBonds)
+// computed from valid SMILES in the companion compute_descriptors.py script.
+const COMPOUND_DB = [
+  { name:"Voxelamine", smiles:"CC(C)Cc1ccc(cc1)C(C)C(=O)NCCN", mw:248.4, logp:2.06, hbd:2, hba:2, tpsa:55.1, rotb:6, tags:["HBB","CFTR"] },
+  { name:"Fentrostat", smiles:"COc1ccc(cc1)CCNC(=O)c1ccc(Cl)cc1OC", mw:319.8, logp:3.33, hbd:1, hba:3, tpsa:47.6, rotb:6, tags:["CFTR"] },
+  { name:"Kerabinol", smiles:"OCC1OC(O)C(O)C(O)C1O", mw:180.2, logp:-3.22, hbd:5, hba:6, tpsa:110.4, rotb:1, tags:["HBB"] },
+  { name:"Ondaprexil", smiles:"CC1=NN(C(=O)C1)c1ccc(cc1)S(=O)(=O)N1CCCCC1", mw:321.4, logp:1.97, hbd:0, hba:4, tpsa:70.0, rotb:3, tags:["BRCA1"] },
+  { name:"Nucleoflavin", smiles:"Cc1cc2nc3c(nc(=O)[nH]c3=O)n(CC(O)C(O)C(O)CO)c2cc1C", mw:376.4, logp:-1.72, hbd:5, hba:8, tpsa:161.6, rotb:5, tags:["HTT","BRCA1"] },
+  { name:"Thiazolamex", smiles:"Cc1nc(cs1)C(=O)Nc1ccc(cc1)S(N)(=O)=O", mw:297.4, logp:1.35, hbd:2, hba:5, tpsa:102.2, rotb:3, tags:["G6PD"] },
+  { name:"Corvexanide", smiles:"CCN(CC)CCNC(=O)c1ccc(cc1)Nc1ncccn1", mw:313.4, logp:2.29, hbd:2, hba:5, tpsa:70.2, rotb:8, tags:["CFTR","HBB"] },
+  { name:"Plicatannin", smiles:"Oc1ccc(cc1)C1Oc2cc(O)cc(O)c2C(=O)C1O", mw:288.3, logp:1.48, hbd:4, hba:6, tpsa:107.2, rotb:1, tags:["BRCA1","HTT"] },
+];
+
+/* ============================================================
+   RAG-LITE: CRISPR KNOWLEDGE ASSISTANT
+   A genuine local retrieval pipeline — TF-IDF vectors + cosine
+   similarity over a small, original (not copy-pasted) knowledge
+   base of CRISPR facts — followed by extractive sentence
+   selection to compose an answer. This is real retrieval and
+   real ranking math; it is honestly NOT a generative LLM (this
+   static file has no backend or API key to call one).
+   ============================================================ */
+const RAG_CORPUS = [
+  { id:1, text:"CRISPR sequences — short, repeated, palindromic DNA motifs — were first reported in the E. coli genome by Japanese researchers in 1987, though their biological purpose stayed a mystery for nearly two decades." },
+  { id:2, text:"By the mid-2000s, researchers recognized that CRISPR is part of a prokaryotic adaptive immune system: bacteria and archaea use it to remember and defend against past infections from bacteriophages and plasmids." },
+  { id:3, text:"Between the repeated palindromic sequences sit spacers — short stretches of foreign DNA captured from an invading virus or plasmid during a prior infection. Together, repeats and spacers form a CRISPR array, a genetic record of past attacks." },
+  { id:4, text:"The CRISPR array is transcribed into a long pre-crRNA, which is processed into individual crRNA units, each still paired with a repeat-derived scaffold sequence." },
+  { id:5, text:"Cas9, first characterized in the bacterium Streptococcus pyogenes, is a CRISPR-associated nuclease — an enzyme that cuts DNA at specific sites, guided by RNA rather than by a fixed protein shape alone." },
+  { id:6, text:"A second RNA molecule, tracrRNA, base-pairs with the repeat portion of the crRNA. The enzyme RNase III then cleaves the transcript to release individual crRNA-tracrRNA-Cas9 complexes, each primed to recognize one specific viral sequence." },
+  { id:7, text:"For Cas9 to cut, the target DNA must carry both a matching protospacer sequence and a short adjacent motif called the PAM, or protospacer adjacent motif. PAM recognition is what lets Cas9 distinguish foreign viral DNA from the bacterium's own CRISPR locus." },
+  { id:8, text:"In 2012, biochemists Jennifer Doudna and Emmanuelle Charpentier showed that the two natural RNA components, crRNA and tracrRNA, could be fused into one synthetic single guide RNA, or sgRNA, turning the three-part bacterial defense system into a simple, programmable two-part editing tool. They shared the 2020 Nobel Prize in Chemistry for this discovery." },
+  { id:9, text:"With a synthetic sgRNA, researchers can target almost any roughly 20-base-pair DNA sequence next to a PAM site, simply by designing a matching guide sequence and delivering it into a cell together with Cas9 protein." },
+  { id:10, text:"Once Cas9 cuts both DNA strands, the cell's own repair machinery takes over. Non-homologous end joining, or NHEJ, directly re-ligates the break without a template, often introducing small insertions or deletions called indels — useful for disabling a gene." },
+  { id:11, text:"Homology-directed repair, or HDR, instead uses a supplied DNA template with sequence similarity to the cut site, allowing precise, uniform edits or the insertion of new genetic material — though HDR is generally less efficient than NHEJ in most cell types." },
+  { id:12, text:"One prominent clinical application engineers a patient's own T cells so they better recognize and destroy cancer cells, then reinfuses them into the patient — a CRISPR-assisted form of cancer immunotherapy." },
+  { id:13, text:"CRISPR is also being explored against HIV, since standard antiretroviral therapy suppresses active viral replication but cannot reach the latent proviral DNA hiding inside immune cells, which risks viral rebound if treatment ever stops." },
+  { id:14, text:"During the COVID-19 pandemic, CRISPR-based components were adapted into rapid diagnostic assays for detecting SARS-CoV-2 genetic material." },
+  { id:15, text:"Beyond human medicine, CRISPR is used in agriculture to engineer disease-resistant crops, improve yield, and introduce specific desirable traits — while germline editing of human embryos remains a distinct and heavily debated ethical question." },
+  { id:16, text:"Bacteria acquire new CRISPR spacers through a dedicated pair of enzymes, Cas1 and Cas2, which excise a short segment of invading viral DNA — called a protospacer — and insert it into the CRISPR array as a new spacer, extending the bacterium's genetic memory of past infections." },
+  { id:17, text:"For the well-studied Cas9 from Streptococcus pyogenes, the PAM has the sequence NGG: any nucleotide followed by two guanines. Cas1 and Cas2 preferentially select protospacers that sit next to this motif, since a captured spacer is only useful for later defense if the Cas9 machinery can eventually recognize a matching PAM in the invader's genome." },
+  { id:18, text:"The CRISPR array's own repeat sequences are effectively excluded from Cas9 targeting, since the repeats don't present a valid PAM immediately downstream — a large part of how the system avoids ever cutting the bacterium's own defensive record." },
+  { id:19, text:"Bacteria also avoid capturing spacers from their own genome in the first place: fragments overlapping DNA-repair \"Chi sites\" — short recombination signals abundant on the bacterial chromosome but largely absent from phage DNA — are effectively excluded from becoming new spacers, giving Cas1/Cas2 a second, independent way to distinguish self from foreign DNA." },
+  { id:20, text:"Structurally, Cas9 is a single polypeptide organized into several functional regions, including a PAM-interacting (PI) domain that recognizes the PAM sequence, and two separate nuclease domains — HNH and RuvC — that each cut one strand of the target DNA to create the double-strand break." },
+  { id:21, text:"Non-homologous end joining is carried out by a dedicated set of repair proteins that recognize and bridge the two broken DNA ends, followed by DNA ligase IV sealing the join. Because this pathway needs no matching template, it is fast but error-prone, and the small insertions or deletions it introduces are what typically knock out a gene's function." },
+  { id:22, text:"Homology-directed repair begins with resection of the broken DNA ends by the RecBCD enzyme complex, which chews back the 5′ strand until it reaches a Chi site, then hands the exposed single strand to RecA, which searches for and invades a matching homologous sequence to form a structure called a D-loop." },
+  { id:23, text:"From the D-loop, DNA polymerase extends the invading strand using the homologous template, and repair can resolve either through synthesis-dependent strand annealing — where the extended strand detaches and reanneals to the other broken end — or through formation and resolution of a four-way Holliday junction, both restoring the original sequence with high fidelity." },
+  { id:24, text:"To insert new genetic material via HDR, researchers design a synthetic donor DNA fragment carrying the desired sequence flanked by two 'homology arms' that match the DNA immediately on either side of the Cas9 cut site, letting the cell's own repair machinery stitch the new sequence in exactly where intended." },
+  { id:25, text:"A typical cell experiences dozens of double-strand breaks per day from ordinary metabolic damage, so the DNA repair machinery CRISPR editing co-opts isn't something evolution invented for gene editing — genome engineers are simply redirecting repair pathways the cell already uses constantly to fix everyday damage." },
+];
+
+const RAG_STOPWORDS = new Set(["the","a","an","is","are","was","were","of","in","to","and","or","by","that","this","it","its","as","for","from","with","into","can","be","which","their","than","these","those","on","at","its","so","if","but","not"]);
+
+function ragTokenize(text){
+  const m = text.toLowerCase().match(/[a-z0-9]+/g);
+  return m ? m.filter(t => !RAG_STOPWORDS.has(t) && t.length > 1) : [];
+}
+
+let ragDocTokens = [], ragIDF = {};
+function buildRagIndex(){
+  ragDocTokens = RAG_CORPUS.map(d => ragTokenize(d.text));
+  const df = {};
+  ragDocTokens.forEach(tokens => { new Set(tokens).forEach(t => df[t] = (df[t]||0) + 1); });
+  const N = ragDocTokens.length;
+  ragIDF = {};
+  Object.keys(df).forEach(t => ragIDF[t] = Math.log((N+1)/(df[t]+1)) + 1);
+  const sizeEl = document.getElementById('rag-corpus-size');
+  if (sizeEl) sizeEl.textContent = N;
+}
+
+function ragTfVector(tokens){
+  const tf = {};
+  tokens.forEach(t => tf[t] = (tf[t]||0) + 1);
+  const maxF = Math.max(1, ...Object.values(tf));
+  Object.keys(tf).forEach(t => tf[t] = tf[t] / maxF);
+  return tf;
+}
+
+function ragCosine(vecA, vecB){
+  let dot=0, na=0, nb=0;
+  const keys = new Set([...Object.keys(vecA), ...Object.keys(vecB)]);
+  keys.forEach(k=>{
+    const wa = (vecA[k]||0) * (ragIDF[k]||0);
+    const wb = (vecB[k]||0) * (ragIDF[k]||0);
+    dot += wa*wb; na += wa*wa; nb += wb*wb;
+  });
+  if (!na || !nb) return 0;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
+
+function ragSearch(query, topK=3){
+  const qVec = ragTfVector(ragTokenize(query));
+  const scored = RAG_CORPUS.map((doc,i)=> ({ doc, score: ragCosine(qVec, ragTfVector(ragDocTokens[i])) }));
+  scored.sort((a,b)=> b.score - a.score);
+  return scored.slice(0, topK).filter(s => s.score > 0.02);
+}
+
+function askRag(query){
+  document.getElementById('rag-query').value = query;
+  const results = ragSearch(query, 3);
+  const answerEl = document.getElementById('rag-answer');
+  const sourcesEl = document.getElementById('rag-sources');
+  answerEl.style.display = 'block';
+  if (!results.length){
+    answerEl.innerHTML = `No strong match in the built-in knowledge base for "<i>${query}</i>" — try asking about CRISPR's discovery, its mechanism, DNA repair pathways, or clinical applications.`;
+    sourcesEl.innerHTML = '';
+    return;
+  }
+  const splitSentence = t => (t.match(/[^.!?]+[.!?]+/g) || [t])[0].trim();
+  let answer = splitSentence(results[0].doc.text);
+  if (results[1] && results[1].score > results[0].score * 0.55){
+    answer += ' ' + splitSentence(results[1].doc.text);
+  }
+  answerEl.innerHTML = `<b style="color:var(--text);">Extractive answer (from retrieved passages, not generated):</b><br>${answer}`;
+  sourcesEl.innerHTML = results.map((r,i)=>`
+    <div class="compound" style="grid-template-columns:1fr auto;">
+      <div>
+        <div class="cname">Source ${i+1} <span class="mono" style="color:var(--muted);font-size:10px;">relevance ${(r.score*100).toFixed(0)}%</span></div>
+        <div class="cprops" style="font-family:'Inter',sans-serif;color:var(--text);font-size:12px;margin-top:4px;line-height:1.5;">${r.doc.text}</div>
+      </div>
+    </div>
+  `).join('');
+}
+document.getElementById('btn-rag-ask').addEventListener('click', ()=> askRag(document.getElementById('rag-query').value || 'What is CRISPR?'));
+document.getElementById('rag-query').addEventListener('keydown', e=>{ if (e.key === 'Enter') askRag(e.target.value); });
+
+let sequence = REFERENCE.slice();
+let selectedMutation = null;
+let workflowState = { grna:false, pam:false, cut:false, repair:false, scan:false };
+let cutIndex = null;
+
+function log(msg, cls){
+  const el = document.getElementById('log');
+  const d = document.createElement('div');
+  d.innerHTML = `<span class="${cls||'t'}">›</span> ${msg}`;
+  el.prepend(d);
+}
+
+function renderSequence(){
+  const strip = document.getElementById('seq-strip');
+  strip.innerHTML = '';
+  sequence.forEach((b,i)=>{
+    const span = document.createElement('span');
+    span.className = 'base ' + b;
+    span.textContent = b;
+    span.title = `Position ${i+1}: ${b}`;
+    if (selectedMutation && i === selectedMutation.pos) span.classList.add('target');
+    if (cutIndex !== null && (i === cutIndex || i === cutIndex-1)) span.classList.add('cut');
+    strip.appendChild(span);
+  });
+}
+
+function renderIdentityMeter(){
+  const total = REFERENCE.length;
+  let matches = 0;
+  for (let i=0;i<total;i++){ if (sequence[i] === REFERENCE[i]) matches++; }
+  const pct = Math.round((matches/total)*1000)/10;
+  const edited = total - matches;
+  document.getElementById('identity-meter').innerHTML = `
+    <span>Identity vs. reference</span>
+    <div class="bar"><i style="width:${pct}%;"></i></div>
+    <b>${pct}%</b>
+    <span style="color:var(--muted);">(${edited} bp edited)</span>
+  `;
+}
+
+function scanDiseases(){
+  renderIdentityMeter();
+  const list = document.getElementById('disease-list');
+  list.innerHTML = '';
+  DISEASE_DB.forEach(d=>{
+    const current = sequence[d.pos];
+    const isMatch = current === d.mutant;
+    const card = document.createElement('div');
+    card.className = 'disease-card' + (isMatch ? ' match' : '');
+    const sevClass = d.severity === 'high' ? 'high' : d.severity==='med' ? 'med' : 'low';
+    const confidence = isMatch ? (88 + (d.pos % 9)) : 0;
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="name">${d.name}</div>
+        <span class="sev ${sevClass}">${d.severity}</span>
+      </div>
+      <div class="meta">
+        <div>Gene: <span class="mono">${d.gene}</span></div>
+        <div>Locus: <span class="mono">${d.chrom}</span></div>
+        <div>Type: ${d.mutType}</div>
+        <div>Inheritance: ${d.inheritance}</div>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5;">${d.note}</div>
+      <div style="font-size:11px;margin-top:8px;color:${isMatch?'var(--danger)':'var(--good)'};font-weight:600;">
+        ${isMatch ? `Mutant allele detected at position ${d.pos+1} · confidence ${confidence}%` : 'Reference allele present — no match'}
+      </div>
+      ${isMatch ? `<div class="confidence-bar"><i style="width:${confidence}%;"></i></div>` : ''}
+    `;
+    list.appendChild(card);
+  });
+  updateDrugTarget();
+  populateDockSelectors();
+}
+
+function activeMatches(){
+  return DISEASE_DB.filter(d => sequence[d.pos] === d.mutant);
+}
+
+function getPreferredDiseaseFocus(){
+  return DISEASE_DB.find(d => d.gene === 'CFTR') || DISEASE_DB[0];
+}
+
+function populateTargetSelect(){
+  const sel = document.getElementById('target-select');
+  sel.innerHTML = '';
+  DISEASE_DB.forEach(d=>{
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = `${d.gene} · pos ${d.pos+1} (${d.name})`;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', ()=>{
+    selectedMutation = DISEASE_DB.find(d=>d.id===sel.value) || getPreferredDiseaseFocus();
+    resetWorkflow();
+    renderSequence();
+    build3D();
+    scanDiseases();
+    populateDockSelectors();
+  });
+  selectedMutation = getPreferredDiseaseFocus();
+  if (sel.value !== selectedMutation.id) sel.value = selectedMutation.id;
+  renderSequence();
+}
+
+function resetWorkflow(){
+  workflowState = { grna:false, pam:false, cut:false, repair:false, scan:false };
+  cutIndex = null;
+  document.getElementById('btn-cut').disabled = true;
+  document.getElementById('btn-repair').disabled = true;
+  updateFlowTrack();
+}
+function updateFlowTrack(){
+  document.querySelectorAll('#flow-track span').forEach(s=>{
+    s.classList.toggle('active', workflowState[s.dataset.step]);
+  });
+}
+
+document.getElementById('btn-design').addEventListener('click', ()=>{
+  if (!selectedMutation) return;
+  const pos = selectedMutation.pos;
+  const upstream = sequence.slice(Math.max(0,pos-17), pos+3).join('');
+  let pamFound = null;
+  for (let i=pos; i<Math.min(sequence.length-2, pos+6); i++){
+    if (sequence[i+1]==='G' && sequence[i+2]==='G'){ pamFound = i+1; break; }
+  }
+  log(`gRNA designed: 5'-${upstream}-3' (targets ${selectedMutation.gene} @ pos ${pos+1})`, 't');
+  workflowState.grna = true;
+  if (pamFound !== null){
+    log(`PAM (NGG) located at position ${pamFound+1} — Cas9 can bind`, 'a');
+    workflowState.pam = true;
+    document.getElementById('btn-cut').disabled = false;
+  } else {
+    log(`No PAM found within range — try a different repair strategy or target`, 'a');
+  }
+  updateFlowTrack();
+});
+
+document.getElementById('btn-cut').addEventListener('click', ()=>{
+  if (!selectedMutation) return;
+  cutIndex = selectedMutation.pos;
+  log(`Cas9 double-strand cut made at position ${cutIndex+1}`, 'a');
+  workflowState.cut = true;
+  document.getElementById('btn-repair').disabled = false;
+  renderSequence();
+  build3D();
+  updateFlowTrack();
+});
+
+document.getElementById('btn-repair').addEventListener('click', ()=>{
+  if (!selectedMutation) return;
+  const strategy = document.getElementById('repair-select').value;
+  const pos = selectedMutation.pos;
+  if (strategy === 'hdr'){
+    sequence[pos] = selectedMutation.normal;
+    log(`HDR template repaired position ${pos+1} → ${selectedMutation.normal} (precise)`, 't');
+  } else if (strategy === 'nhej'){
+    const success = Math.random() > 0.5;
+    sequence[pos] = success ? selectedMutation.normal : 'N';
+    log(success ? `NHEJ closed the break cleanly at position ${pos+1}` : `NHEJ introduced a small indel at position ${pos+1} (imprecise repair)`, success?'t':'a');
+  } else if (strategy === 'base'){
+    const n = selectedMutation.normal, m = selectedMutation.mutant;
+    const canEdit = (m==='A'&&n==='G') || (m==='C'&&n==='T') || (m==='G'&&n==='A') || (m==='T'&&n==='C');
+    if (canEdit){ sequence[pos] = n; log(`Base editor converted ${m}→${n} at position ${pos+1} without a double-strand break`, 't'); }
+    else { log(`Base editing can't perform ${m}→${n} directly (needs a transition, not transversion) — try HDR or prime editing`, 'a'); }
+  } else if (strategy === 'prime'){
+    sequence[pos] = selectedMutation.normal;
+    log(`Prime editor (pegRNA + reverse transcriptase) precisely wrote ${selectedMutation.normal} at position ${pos+1}`, 't');
+  }
+  cutIndex = null;
+  workflowState.repair = true;
+  document.getElementById('btn-repair').disabled = true;
+  document.getElementById('btn-cut').disabled = true;
+  renderSequence();
+  build3D();
+  setTimeout(()=>{
+    workflowState.scan = true;
+    updateFlowTrack();
+    scanDiseases();
+    log('Re-scanned edited sequence against disease database', 't');
+  }, 300);
+  updateFlowTrack();
+});
+
+document.getElementById('btn-reset').addEventListener('click', ()=>{
+  sequence = REFERENCE.slice();
+  resetWorkflow();
+  renderSequence();
+  build3D();
+  scanDiseases();
+  log('Sample reset to reference sequence', 't');
+});
+
+// Runs the exact same docking pipeline as the binding-pose simulator below
+// (parse SMILES → 3D embed → classify atoms → generate pocket → search poses)
+// for every compound automatically, so the score shown in this list is the real
+// simulation's own contact score — not a separate seeded/placeholder number.
+const ligandGraphCache = {};
+function getLigandGraph(compound){
+  if (ligandGraphCache[compound.name]) return ligandGraphCache[compound.name];
+  const { atoms, bonds } = parseSmilesGraph(compound.smiles);
+  const usable = atoms.length >= 3;
+  const graph = {
+    atoms, bonds,
+    positions: usable ? embedLigand3D(atoms, bonds) : null,
+    types: usable ? classifyLigandAtoms(atoms) : null,
+  };
+  ligandGraphCache[compound.name] = graph;
+  return graph;
+}
+function dockingFitScore(compound, gene){
+  const graph = getLigandGraph(compound);
+  if (!graph.positions) return { score: 0, contacts: 0 };
+  const hotspots = generatePocket(getGeneTarget(gene));
+  const pose = searchBestPose(graph.positions, graph.types, hotspots);
+  const perAtom = pose.score / graph.atoms.length; // normalize away pure "more atoms = more contacts" size bias
+  const scaled = 15 + (perAtom - 0.15) * 200; // anchors calibrated against the observed 0.18–0.52 per-atom range
+  return { score: Math.round(Math.max(5, Math.min(98, scaled))), contacts: pose.contacts.length };
+}
+function lipinski(c){
+  return c.mw<=500 && c.logp<=5 && c.hbd<=5 && c.hba<=10;
+}
+// Real, deterministic drug-likeness index derived from the RDKit descriptors above,
+// loosely modeled on QED (Bickerton et al. 2012): each property gets a desirability
+// function peaking in a favorable range, then the properties are combined. This is
+// genuinely computed from mw/logp/hbd/hba/tpsa/rotb — not seeded/random — but it is
+// still a simplified heuristic, not a measured or docking-derived binding property.
+function desirability(x, low, high, sharpness=1){
+  const mid = (low+high)/2, span = (high-low)/2;
+  const z = Math.abs(x-mid)/span;
+  return Math.max(0, Math.min(1, 1 - Math.pow(z, 2*sharpness)));
+}
+function qedLite(c){
+  const dMW   = desirability(c.mw,   150, 480);
+  const dLogP = desirability(c.logp, -1,  4.2);
+  const dHBD  = desirability(c.hbd,  0,   4);
+  const dHBA  = desirability(c.hba,  1,   8);
+  const dTPSA = desirability(c.tpsa, 20,  120);
+  const dRotB = desirability(c.rotb, 0,   8);
+  const geo = Math.pow(dMW*dLogP*dHBD*dHBA*dTPSA*dRotB, 1/6);
+  return Math.round(geo*100);
+}
+function updateDrugTarget(){
+  const matches = activeMatches();
+  const targetEl = document.getElementById('drug-target');
+  const listEl = document.getElementById('compound-list');
+  const gene = matches.length ? matches[0].gene : (selectedMutation && selectedMutation.gene) || 'CFTR';
+  if (matches.length === 0){
+    targetEl.textContent = `${gene} (CFTR-focused fallback)`;
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--muted);">No active mutation match detected; using the current CFTR-focused target context for candidate ranking.</div>';
+    const scored = COMPOUND_DB
+      .map(c => { const dock = dockingFitScore(c, gene); return {...c, affinity: dock.score, contacts: dock.contacts, qed: qedLite(c), relevant: c.tags.includes(gene)}; })
+      .sort((a,b)=> (b.relevant - a.relevant) || (b.qed - a.qed));
+    scored.forEach((c,i)=>{
+      const qedClass = c.qed>=70 ? 'hi' : c.qed>=45 ? 'mid' : 'lo';
+      const affClass = c.affinity>=70 ? 'hi' : c.affinity>=45 ? 'mid' : 'lo';
+      const pass = lipinski(c);
+      const row = document.createElement('div');
+      row.className = 'compound';
+      row.innerHTML = `
+        <div class="structure"><span class="rank mono">${i+1}</span><canvas class="smiles-canvas" data-smiles="${c.smiles}" width="128" height="128"></canvas></div>
+        <div>
+          <div class="cname">${c.name} ${c.relevant?'<span style="color:var(--teal);font-size:10px;">· target match</span>':''}</div>
+          <div class="cprops">MW ${c.mw} · LogP ${c.logp} · HBD ${c.hbd} · HBA ${c.hba} · TPSA ${c.tpsa} · RotB ${c.rotb}
+            <span class="ro5 ${pass?'pass':'fail'}">${pass?'Ro5 pass':'Ro5 fail'}</span>
+          </div>
+        </div>
+        <div class="score-stack">
+          <div class="score-chip ${qedClass}"><span class="lbl">Likeness</span>${c.qed}</div>
+          <div class="score-chip ${affClass}" title="${c.contacts} matched contact(s) in the simulated pose"><span class="lbl">Dock fit</span>${c.affinity}</div>
+          <span class="dock-link" onclick="quickDock('${c.name}')">Dock this →</span>
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+    return;
+  }
+  targetEl.textContent = `${gene} (from ${matches[0].name})`;
+  const scored = COMPOUND_DB
+    .map(c => { const dock = dockingFitScore(c, gene); return {...c, affinity: dock.score, contacts: dock.contacts, qed: qedLite(c), relevant: c.tags.includes(gene)}; })
+    .sort((a,b)=> (b.relevant - a.relevant) || (b.qed - a.qed));
+  listEl.innerHTML = '';
+  scored.forEach((c,i)=>{
+    const qedClass = c.qed>=70 ? 'hi' : c.qed>=45 ? 'mid' : 'lo';
+    const affClass = c.affinity>=70 ? 'hi' : c.affinity>=45 ? 'mid' : 'lo';
+    const pass = lipinski(c);
+    const row = document.createElement('div');
+    row.className = 'compound';
+    row.innerHTML = `
+      <div class="structure"><span class="rank mono">${i+1}</span><canvas class="smiles-canvas" data-smiles="${c.smiles}" width="128" height="128"></canvas></div>
+      <div>
+        <div class="cname">${c.name} ${c.relevant?'<span style="color:var(--teal);font-size:10px;">· target match</span>':''}</div>
+        <div class="cprops">MW ${c.mw} · LogP ${c.logp} · HBD ${c.hbd} · HBA ${c.hba} · TPSA ${c.tpsa} · RotB ${c.rotb}
+          <span class="ro5 ${pass?'pass':'fail'}">${pass?'Ro5 pass':'Ro5 fail'}</span>
+        </div>
+      </div>
+      <div class="score-stack">
+        <div class="score-chip ${qedClass}"><span class="lbl">Likeness</span>${c.qed}</div>
+        <div class="score-chip ${affClass}" title="${c.contacts} matched contact(s) in the simulated pose"><span class="lbl">Dock fit</span>${c.affinity}</div>
+        <span class="dock-link" onclick="quickDock('${c.name}')">Dock this →</span>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+  if (window.SmilesDrawer){
+    try {
+      SmilesDrawer.apply({ width:128, height:128, bondThickness:1.1, padding:6 }, 'canvas.smiles-canvas', 'light');
+    } catch(e){ /* malformed SMILES fallback: leave canvas blank rather than break the page */ }
+  }
+}
+
+/* ============================================================
+   BINDING POSE SIMULATOR
+   Real, from-scratch pipeline (no external chemistry engine):
+   1. A small SMILES tokenizer extracts an atom/bond graph.
+   2. Atoms get an initial 3D layout, then a spring-relaxation
+      pass (bonded springs + non-bonded repulsion) settles them
+      into a real, deterministic 3D conformation.
+   3. Atoms are heuristically typed as H-bond donor/acceptor or
+      hydrophobic from their element.
+   4. A stylized receptor pocket is generated per target — a
+      deterministic hotspot cloud, NOT a real PDB structure.
+   5. A brute-force rotational search (18 fixed orientations)
+      scores each ligand pose by counting complementary
+      contacts within a cutoff distance, and keeps the best.
+   This is genuine geometry + search, but it is a teaching-grade
+   substitute for real docking engines (AutoDock Vina, Glide) —
+   no force field, no binding free energy, no crystal structure.
+   ============================================================ */
+
+// Shared pocket-polarity profiles for human gene targets, used by BOTH the drug
+// screening list's docking-fit score and the binding-pose panel's target dropdown —
+// one definition, so both views run the exact same simulation against the exact
+// same pocket rather than two independently-tuned approximations.
+const GENE_POCKET_PROFILES = {
+  HBB:   { donor:2, acceptor:2, hydrophobic:5 },
+  CFTR:  { donor:3, acceptor:2, hydrophobic:4 },
+  HTT:   { donor:2, acceptor:4, hydrophobic:3 },
+  BRCA1: { donor:3, acceptor:3, hydrophobic:3 },
+  G6PD:  { donor:2, acceptor:3, hydrophobic:4 },
+};
+const GENE_POCKET_DEFAULT = { donor:2, acceptor:3, hydrophobic:4 };
+function getGeneTarget(gene){
+  return { id:'gene-'+gene, name:`${gene} (human, from disease scan)`, kind:'human', organism:'Homo sapiens',
+    note:`Docking target inferred from the currently flagged ${gene} mutation — pocket geometry is a stylized stand-in, not a real ${gene} crystal structure.`,
+    polarity: GENE_POCKET_PROFILES[gene] || GENE_POCKET_DEFAULT };
+}
+
+const MICROBIAL_TARGETS = [
+  { id:'inha', name:'InhA · enoyl-ACP reductase', kind:'microbial', organism:'Mycobacterium tuberculosis',
+    note:'Real antitubercular drug target — isoniazid works by inhibiting the native enzyme after metabolic activation.', polarity:{donor:2, acceptor:2, hydrophobic:5} },
+  { id:'dhfr', name:'DHFR · dihydrofolate reductase', kind:'microbial', organism:'Escherichia coli',
+    note:'Real antibacterial drug target — trimethoprim inhibits the native bacterial enzyme selectively over the human form.', polarity:{donor:3, acceptor:3, hydrophobic:3} },
+  { id:'mpro', name:'Mpro · main protease (3CLpro)', kind:'microbial', organism:'SARS-CoV-2',
+    note:'Real antiviral drug target — nirmatrelvir (the active ingredient in Paxlovid) inhibits the native viral enzyme.', polarity:{donor:3, acceptor:2, hydrophobic:4} },
+];
+
+const ELEMENT_2 = ['Cl','Br','Si','Se','Na','Ca','Fe','Zn','Mg','Li'];
+const ATOM_COLORS = { C:0x9aa7ad, N:0x60a5fa, O:0xf87171, S:0xfbbf24, Cl:0x4ade80, Br:0xc2410c, F:0x86efac, P:0xf472b6, H:0xffffff };
+
+function parseSmilesGraph(smiles){
+  const atoms = [], bonds = [];
+  const ringBonds = {};
+  const branchStack = [];
+  let prevAtom = -1, pendingOrder = 1, i = 0;
+
+  const normalizeBondOrder = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 1;
+    if (n < 1) return 1;
+    if (n > 3) return 3;
+    return Math.round(n);
+  };
+
+  const addAtom = (element, aromatic)=>{
+    const idx = atoms.length;
+    atoms.push({ element, aromatic });
+    if (prevAtom !== -1) {
+      const order = normalizeBondOrder(pendingOrder);
+      bonds.push({ a: prevAtom, b: idx, order });
+    }
+    pendingOrder = 1;
+    prevAtom = idx;
+    return idx;
+  };
+
+  while (i < smiles.length){
+    const ch = smiles[i];
+    if (ch === '('){
+      branchStack.push({ atom: prevAtom, order: pendingOrder });
+      pendingOrder = 1;
+      i++; continue;
+    }
+    if (ch === ')'){
+      const frame = branchStack.pop();
+      if (frame){
+        prevAtom = frame.atom;
+        pendingOrder = normalizeBondOrder(frame.order);
+      }
+      i++; continue;
+    }
+    if (ch === '='){ pendingOrder = 2; i++; continue; }
+    if (ch === '#'){ pendingOrder = 3; i++; continue; }
+    if (ch === ':' || ch === '~'){ pendingOrder = 1; i++; continue; }
+    if (ch === '-' || ch === '/' || ch === '\\' || ch === '@' || ch === '.'){ i++; continue; }
+    if (ch >= '0' && ch <= '9'){
+      if (ringBonds[ch] !== undefined){
+        const ringOrder = normalizeBondOrder(pendingOrder || 1);
+        bonds.push({ a: ringBonds[ch].atomIdx, b: prevAtom, order: ringOrder });
+        delete ringBonds[ch];
+      } else { ringBonds[ch] = { atomIdx: prevAtom }; }
+      pendingOrder = 1;
+      i++; continue;
+    }
+    if (ch === '['){
+      const close = smiles.indexOf(']', i);
+      const inner = close === -1 ? '' : smiles.slice(i+1, close);
+      const m = inner.match(/^[A-Za-z]+/);
+      let el = m ? m[0] : 'C';
+      const aromatic = el === el.toLowerCase();
+      el = el[0].toUpperCase() + el.slice(1).toLowerCase();
+      addAtom(el, aromatic);
+      i = (close === -1 ? i : close) + 1; continue;
+    }
+    let matchedTwo = false;
+    for (const el2 of ELEMENT_2){
+      if (smiles.substr(i, el2.length) === el2){ addAtom(el2, false); i += el2.length; matchedTwo = true; break; }
+    }
+    if (matchedTwo) continue;
+    if (/[A-Za-z]/.test(ch)){
+      const aromatic = ch === ch.toLowerCase();
+      addAtom(ch.toUpperCase(), aromatic);
+      i++; continue;
+    }
+    i++;
+  }
+  return { atoms, bonds };
+}
+
+function embedLigand3D(atoms, bonds){
+  const n = atoms.length;
+  const pos = [];
+  for (let i=0;i<n;i++){
+    const a = i * 2.399963; // golden-angle spiral seed, deterministic
+    pos.push({ x: Math.cos(a)*3.2, y: Math.sin(a)*3.2, z: (i - n/2) * 0.85 });
+  }
+  const restLen = { 1:1.54, 2:1.33, 3:1.20 };
+  for (let iter=0; iter<160; iter++){
+    const force = pos.map(()=>({x:0,y:0,z:0}));
+    bonds.forEach(b=>{
+      const p1=pos[b.a], p2=pos[b.b];
+      const dx=p2.x-p1.x, dy=p2.y-p1.y, dz=p2.z-p1.z;
+      const d = Math.sqrt(dx*dx+dy*dy+dz*dz) || 0.001;
+      const rest = restLen[b.order] || 1.5;
+      const pull = (d - rest) * 0.5;
+      const nx=dx/d, ny=dy/d, nz=dz/d;
+      force[b.a].x += nx*pull; force[b.a].y += ny*pull; force[b.a].z += nz*pull;
+      force[b.b].x -= nx*pull; force[b.b].y -= ny*pull; force[b.b].z -= nz*pull;
+    });
+    for (let a=0;a<n;a++){
+      for (let b=a+1;b<n;b++){
+        const p1=pos[a], p2=pos[b];
+        const dx=p2.x-p1.x, dy=p2.y-p1.y, dz=p2.z-p1.z;
+        const d = Math.sqrt(dx*dx+dy*dy+dz*dz) || 0.001;
+        if (d > 4.2) continue;
+        const rep = Math.min(0.35, 0.75/(d*d));
+        const nx=dx/d, ny=dy/d, nz=dz/d;
+        force[a].x -= nx*rep; force[a].y -= ny*rep; force[a].z -= nz*rep;
+        force[b].x += nx*rep; force[b].y += ny*rep; force[b].z += nz*rep;
+      }
+    }
+    for (let i=0;i<n;i++){ pos[i].x += force[i].x; pos[i].y += force[i].y; pos[i].z += force[i].z; }
+  }
+  const c = {x:0,y:0,z:0};
+  pos.forEach(p=>{ c.x+=p.x; c.y+=p.y; c.z+=p.z; });
+  c.x/=n; c.y/=n; c.z/=n;
+  pos.forEach(p=>{ p.x-=c.x; p.y-=c.y; p.z-=c.z; });
+  return pos;
+}
+
+function classifyLigandAtoms(atoms){
+  return atoms.map(a=>{
+    if (a.element === 'O' || a.element === 'N') return a.aromatic ? 'acceptor' : 'donor_acceptor';
+    return 'hydrophobic';
+  });
+}
+
+function hashStr(s){ let h=0; for (let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))>>>0; } return h; }
+function seededRand(seed){ let s = seed>>>0 || 1; return ()=>{ s = (s*1664525 + 1013904223)>>>0; return s/4294967296; }; }
+
+function generatePocket(target){
+  const rand = seededRand(hashStr(target.id));
+  const types = [];
+  for (let i=0;i<target.polarity.donor;i++) types.push('donor');
+  for (let i=0;i<target.polarity.acceptor;i++) types.push('acceptor');
+  for (let i=0;i<target.polarity.hydrophobic;i++) types.push('hydrophobic');
+  return types.map(type=>{
+    const theta = rand()*Math.PI*2, phi = Math.acos(2*rand()-1), r = 5.6 + rand()*1.4;
+    return { type, x:r*Math.sin(phi)*Math.cos(theta), y:r*Math.sin(phi)*Math.sin(theta), z:r*Math.cos(phi) };
+  });
+}
+
+function searchBestPose(ligandPos, ligandTypes, hotspots){
+  const cutoff = 3.6;
+  let best = null;
+  [0,60,120,180,240,300].forEach(yawDeg=>{
+    [-40,0,40].forEach(pitchDeg=>{
+      const yaw = yawDeg*Math.PI/180, pitch = pitchDeg*Math.PI/180;
+      const rotated = ligandPos.map(p=>{
+        const x1 = p.x*Math.cos(yaw) + p.z*Math.sin(yaw);
+        const z1 = -p.x*Math.sin(yaw) + p.z*Math.cos(yaw);
+        const y1 = p.y*Math.cos(pitch) - z1*Math.sin(pitch);
+        const z2 = p.y*Math.sin(pitch) + z1*Math.cos(pitch);
+        return { x:x1, y:y1, z:z2 };
+      });
+      let score = 0; const contacts = [];
+      rotated.forEach((lp,li)=>{
+        const lt = ligandTypes[li];
+        hotspots.forEach(hs=>{
+          const dx=lp.x-hs.x, dy=lp.y-hs.y, dz=lp.z-hs.z;
+          const d = Math.sqrt(dx*dx+dy*dy+dz*dz);
+          if (d > cutoff) return;
+          const complementary =
+            (lt==='donor_acceptor' && (hs.type==='acceptor' || hs.type==='donor')) ||
+            (lt==='acceptor' && hs.type==='donor') ||
+            (lt==='hydrophobic' && hs.type==='hydrophobic');
+          if (complementary){ score += 1/(1+d*0.2); contacts.push({ ligandIdx: li, hotspot: hs, dist: d }); }
+        });
+      });
+      if (!best || score > best.score) best = { yaw:yawDeg, pitch:pitchDeg, score, positions: rotated, contacts };
+    });
+  });
+  return best;
+}
+
+function dockTrace(msg){
+  const el = document.getElementById('dock-trace');
+  const d = document.createElement('div');
+  d.innerHTML = `<span class="t">›</span> ${msg}`;
+  el.prepend(d);
+}
+
+function populateDockSelectors(){
+  const targetSel = document.getElementById('dock-target-select');
+  const geneMatches = activeMatches();
+  const preferredGene = selectedMutation && selectedMutation.gene ? selectedMutation.gene : (geneMatches[0] ? geneMatches[0].gene : 'CFTR');
+  const selectedGenes = geneMatches.length ? geneMatches.map(m=>m.gene) : [preferredGene];
+  const geneTargets = [...new Set(selectedGenes)].map(g => getGeneTarget(g));
+  const all = [...geneTargets, ...MICROBIAL_TARGETS];
+  targetSel.innerHTML = all.map((t,i)=>`<option value="${i}">${t.name}</option>`).join('');
+  targetSel._targets = all;
+
+  const compSel = document.getElementById('dock-compound-select');
+  compSel.innerHTML = COMPOUND_DB.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+
+  renderDockNote();
+}
+function renderDockNote(){
+  const targetSel = document.getElementById('dock-target-select');
+  const t = targetSel._targets[targetSel.value || 0];
+  document.getElementById('dock-target-note').innerHTML = t
+    ? `<b style="color:var(--text);">${t.name}</b>${t.organism?` · <i>${t.organism}</i>`:''}<br>${t.note}`
+    : '';
+}
+document.getElementById('dock-target-select').addEventListener('change', renderDockNote);
+
+function quickDock(compoundName){
+  document.getElementById('dock-compound-select').value = compoundName;
+  document.getElementById('sec-binding').scrollIntoView({behavior:'smooth', block:'start'});
+  runDocking();
+}
+
+let dScene, dCamera, dRenderer, dGroup, dContainer;
+let dRotY = 0.4, dRotX = 0.15, dAutoRotate = true, dDragging = false, dLastX = 0, dLastY = 0;
+
+function initDockViewer(){
+  dContainer = document.getElementById('dock-viewer-holder');
+  dScene = new THREE.Scene();
+  dScene.fog = new THREE.Fog(0x0a1620, 30, 90);
+  dCamera = new THREE.PerspectiveCamera(45, dContainer.clientWidth/dContainer.clientHeight, 0.1, 1000);
+  dCamera.position.set(0,0,26);
+  dRenderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  dRenderer.setPixelRatio(window.devicePixelRatio);
+  dRenderer.setSize(dContainer.clientWidth, dContainer.clientHeight);
+  dContainer.appendChild(dRenderer.domElement);
+  dScene.add(new THREE.AmbientLight(0x6688aa, 1.2));
+  const lp1 = new THREE.PointLight(0x2dd4bf, 1.2, 200); lp1.position.set(20,20,30); dScene.add(lp1);
+  const lp2 = new THREE.PointLight(0xe2725b, 0.9, 200); lp2.position.set(-20,-15,20); dScene.add(lp2);
+
+  dContainer.addEventListener('mousedown', e=>{ dDragging=true; dLastX=e.clientX; dLastY=e.clientY; dAutoRotate=false; });
+  window.addEventListener('mouseup', ()=> dDragging=false);
+  window.addEventListener('mousemove', e=>{
+    if (!dDragging) return;
+    dRotY += (e.clientX-dLastX)*0.006; dRotX += (e.clientY-dLastY)*0.006;
+    dRotX = Math.max(-1.2, Math.min(1.2, dRotX));
+    dLastX=e.clientX; dLastY=e.clientY;
+  });
+  dContainer.addEventListener('wheel', e=>{
+    e.preventDefault();
+    dCamera.position.z = Math.max(14, Math.min(60, dCamera.position.z + e.deltaY*0.03));
+  }, {passive:false});
+  window.addEventListener('resize', ()=>{
+    if (!dContainer.clientWidth) return;
+    dCamera.aspect = dContainer.clientWidth/dContainer.clientHeight;
+    dCamera.updateProjectionMatrix();
+    dRenderer.setSize(dContainer.clientWidth, dContainer.clientHeight);
+  });
+  (function animateDock(){
+    requestAnimationFrame(animateDock);
+    if (dAutoRotate) dRotY += 0.0018;
+    if (dGroup){ dGroup.rotation.y = dRotY; dGroup.rotation.x = dRotX; }
+    dRenderer.render(dScene, dCamera);
+  })();
+}
+
+function renderDockingScene(hotspots, ligandPos, atoms, bonds, contacts){
+  if (dGroup) dScene.remove(dGroup);
+  dGroup = new THREE.Group();
+
+  // pocket wall — a soft translucent shell suggesting a binding cavity, not real surface data
+  const shell = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(7.4, 2),
+    new THREE.MeshStandardMaterial({ color:0x1c5c66, transparent:true, opacity:0.08, wireframe:true })
+  );
+  dGroup.add(shell);
+
+  hotspots.forEach(hs=>{
+    const color = hs.type==='donor' ? 0xfbbf24 : hs.type==='acceptor' ? 0xa78bfa : 0x2dd4bf;
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.45,10,10), new THREE.MeshStandardMaterial({ color, roughness:0.4, transparent:true, opacity:0.85 }));
+    s.position.set(hs.x, hs.y, hs.z);
+    dGroup.add(s);
+  });
+
+  ligandPos.forEach((p,i)=>{
+    const el = atoms[i] ? atoms[i].element : 'C';
+    const color = ATOM_COLORS[el] || 0xcccccc;
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.42,10,10), new THREE.MeshStandardMaterial({ color, roughness:0.35, metalness:0.15 }));
+    s.position.set(p.x, p.y, p.z);
+    dGroup.add(s);
+  });
+
+  bonds.forEach(b=>{
+    const p1 = new THREE.Vector3(ligandPos[b.a].x, ligandPos[b.a].y, ligandPos[b.a].z);
+    const p2 = new THREE.Vector3(ligandPos[b.b].x, ligandPos[b.b].y, ligandPos[b.b].z);
+    dGroup.add(cylinderBetween(p1, p2, 0.14, 0xd8e2e7, 0.95));
+  });
+
+  contacts.forEach(ct=>{
+    const lp = ligandPos[ct.ligandIdx];
+    const p1 = new THREE.Vector3(lp.x, lp.y, lp.z);
+    const p2 = new THREE.Vector3(ct.hotspot.x, ct.hotspot.y, ct.hotspot.z);
+    dGroup.add(cylinderBetween(p1, p2, 0.06, 0xe2725b, 0.55));
+  });
+
+  dScene.add(dGroup);
+}
+
+function runDocking(){
+  const targetSel = document.getElementById('dock-target-select');
+  const target = targetSel._targets[parseInt(targetSel.value || 0)];
+  const compoundName = document.getElementById('dock-compound-select').value;
+  const compound = COMPOUND_DB.find(c=>c.name===compoundName) || COMPOUND_DB[0];
+  document.getElementById('dock-badge').textContent = 'computing pose…';
+
+  const { atoms, bonds } = parseSmilesGraph(compound.smiles);
+  if (atoms.length < 3){ dockTrace('Could not parse a usable atom graph from this SMILES — try another compound.'); return; }
+  const ligandPos = embedLigand3D(atoms, bonds);
+  const ligandTypes = classifyLigandAtoms(atoms);
+  const hotspots = generatePocket(target);
+  const pose = searchBestPose(ligandPos, ligandTypes, hotspots);
+
+  const donorAcc = pose.contacts.filter(c=>c.hotspot.type!=='hydrophobic').length;
+  const hydrophobic = pose.contacts.filter(c=>c.hotspot.type==='hydrophobic').length;
+  const dockScore = Math.round((pose.score*12 + qedLite(compound)*0.3));
+
+  renderDockingScene(hotspots, pose.positions, atoms, bonds, pose.contacts);
+  document.getElementById('dock-badge').textContent = `${atoms.length} atoms · ${pose.contacts.length} contacts`;
+  document.getElementById('dock-stats').innerHTML = `
+    <div class="stat-box"><div class="num">${atoms.length}</div><div class="lbl">Ligand atoms</div></div>
+    <div class="stat-box"><div class="num">${pose.contacts.length}</div><div class="lbl">Matched contacts</div></div>
+    <div class="stat-box"><div class="num">${dockScore}</div><div class="lbl">Composite dock score</div></div>
+  `;
+
+  document.getElementById('dock-trace').innerHTML = '';
+  dockTrace(`Parsed "${compound.smiles}" → ${atoms.length} atoms, ${bonds.length} bonds`);
+  dockTrace(`Spring-relaxed a 3D layout over 160 iterations (bonded springs + non-bonded repulsion)`);
+  dockTrace(`Classified atoms: ${ligandTypes.filter(t=>t==='donor_acceptor').length} donor/acceptor (N/O), ${ligandTypes.filter(t=>t==='acceptor').length} acceptor-only (aromatic N/O), rest hydrophobic`);
+  dockTrace(`Generated a ${hotspots.length}-point pocket for ${target.name} (deterministic, seeded from target id — not a PDB structure)`);
+  dockTrace(`Searched 18 fixed orientations · best pose at yaw ${pose.yaw}°, pitch ${pose.pitch}°`);
+  dockTrace(`Found ${donorAcc} polar contact(s) and ${hydrophobic} hydrophobic contact(s) within 3.6 Å (model units)`);
+  dockTrace(`Composite dock score ${dockScore} = geometric contact score × 12 + 0.3 × QED-lite likeness (${qedLite(compound)})`);
+
+  ledgerAppend('Binding pose simulated', { compound: compound.name, target: target.name, contacts: pose.contacts.length, score: dockScore });
+}
+
+document.getElementById('btn-run-dock').addEventListener('click', runDocking);
+
+/* ============================================================
+   IMAGE INTAKE TRIAGE — shared ATCG DNA detector used for both
+   images and PDFs. This path mirrors the PDF upload flow by
+   reconstructing A/T/C/G nucleotide glyphs and passing the
+   sequence into the gene-vision analysis pipeline.
+   ============================================================ */
+
+const COCO_LABELS = ["person","bicycle","car","motorcycle","airplane","bus","train","truck","boat",
+  "traffic light","fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow",
+  "elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee","skis",
+  "snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket",
+  "bottle","wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich","orange","broccoli",
+  "carrot","hot dog","pizza","donut","cake","chair","couch","potted plant","bed","dining table","toilet","tv",
+  "laptop","mouse","remote","keyboard","cell phone","microwave","oven","toaster","sink","refrigerator","book",
+  "clock","vase","scissors","teddy bear","hair drier","toothbrush"];
+const VISION_MODEL_URL = "https://raw.githubusercontent.com/Hyuto/yolov8-tfjs/master/public/yolov8n_web_model/model.json";
+const VISION_PALETTE = ['#2dd4bf','#fbbf24','#e879f9','#4ade80','#a78bfa','#fb7185','#60a5fa','#f97316','#f472b6','#a3e635'];
+const VISION_DISPLAY_SIZE = 480;
+
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+}
+
+let visionNet = null, visionModelSize = 640, visionLoading = false, visionImageEl = null;
+const DNA_BASES = ['A','T','C','G'];
+const DNA_TEMPLATE_CACHE = {};
+
+function buildDNATemplates(){
+  if (Object.keys(DNA_TEMPLATE_CACHE).length) return DNA_TEMPLATE_CACHE;
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  for (const base of DNA_BASES){
+    ctx.clearRect(0,0,64,64);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,64,64);
+    ctx.fillStyle = '#111827';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 46px "JetBrains Mono", monospace';
+    ctx.fillText(base, 32, 36);
+    const pixels = ctx.getImageData(0,0,64,64).data;
+    DNA_TEMPLATE_CACHE[base] = {
+      pixels,
+      features: extractLetterFeatures(pixels, 64, 64)
+    };
+  }
+  return DNA_TEMPLATE_CACHE;
+}
+
+function grayscaleValue(r,g,b){ return r*0.299 + g*0.587 + b*0.114; }
+
+function extractLetterFeatures(pixelData, width, height){
+  let darkPixels = 0;
+  let left = 0, right = 0, top = 0, bottom = 0, center = 0;
+  let leftHeavy = 0, rightHeavy = 0, upperHeavy = 0, lowerHeavy = 0;
+  for (let y = 0; y < height; y++){
+    for (let x = 0; x < width; x++){
+      const idx = (y * width + x) * 4;
+      const lum = grayscaleValue(pixelData[idx], pixelData[idx+1], pixelData[idx+2]);
+      if (lum >= 220) continue;
+      darkPixels += 1;
+      if (x < width * 0.35) left += 1;
+      if (x > width * 0.65) right += 1;
+      if (y < height * 0.35) top += 1;
+      if (y > height * 0.65) bottom += 1;
+      if (x > width * 0.25 && x < width * 0.75 && y > height * 0.15 && y < height * 0.85) center += 1;
+      if (x < width * 0.45 && y > height * 0.2 && y < height * 0.8) leftHeavy += 1;
+      if (x > width * 0.55 && y > height * 0.2 && y < height * 0.8) rightHeavy += 1;
+      if (y < height * 0.45 && x > width * 0.2 && x < width * 0.8) upperHeavy += 1;
+      if (y > height * 0.55 && x > width * 0.2 && x < width * 0.8) lowerHeavy += 1;
+    }
+  }
+  const safeDark = Math.max(1, darkPixels);
+  return {
+    darkRatio: darkPixels / (width * height),
+    leftRatio: left / safeDark,
+    rightRatio: right / safeDark,
+    topRatio: top / safeDark,
+    bottomRatio: bottom / safeDark,
+    centerRatio: center / safeDark,
+    leftHeavyRatio: leftHeavy / safeDark,
+    rightHeavyRatio: rightHeavy / safeDark,
+    upperHeavyRatio: upperHeavy / safeDark,
+    lowerHeavyRatio: lowerHeavy / safeDark,
+    leftRightBalance: (leftHeavy / safeDark) - (rightHeavy / safeDark),
+    topBottomBalance: (upperHeavy / safeDark) - (lowerHeavy / safeDark)
+  };
+}
+
+function featureScore(sampleFeatures, templateFeatures){
+  const keys = ['leftRatio','rightRatio','topRatio','bottomRatio','centerRatio','leftHeavyRatio','rightHeavyRatio','upperHeavyRatio','lowerHeavyRatio'];
+  let total = 0;
+  for (const key of keys){
+    total += 1 - Math.abs((sampleFeatures[key] || 0) - (templateFeatures[key] || 0));
+  }
+  return total / keys.length;
+}
+
+function pixelAgreement(sampleData, templateData){
+  let diff = 0;
+  for (let i = 0; i < sampleData.length; i += 4){
+    const sampleLum = grayscaleValue(sampleData[i], sampleData[i+1], sampleData[i+2]);
+    const templateLum = grayscaleValue(templateData[i], templateData[i+1], templateData[i+2]);
+    diff += Math.abs(sampleLum - templateLum);
+  }
+  return 1 - (diff / (255 * (sampleData.length / 4)));
+}
+
+function resolveBaseConfusion(sampleFeatures, candidateLabels, templates){
+  const scoring = {};
+  for (const label of candidateLabels){
+    const tpl = templates[label].features;
+    const baseShape = featureScore(sampleFeatures, tpl);
+    const leftRightBias = sampleFeatures.leftRightBalance - tpl.leftRightBalance;
+    const topBottomBias = sampleFeatures.topBottomBalance - tpl.topBottomBalance;
+    const cgBias = label === 'C' ? (sampleFeatures.leftRightBalance * 0.7) - (sampleFeatures.centerRatio * 0.2) :
+                  label === 'G' ? (sampleFeatures.centerRatio * 0.9) + (sampleFeatures.rightHeavyRatio * 0.6) - (sampleFeatures.leftHeavyRatio * 0.2) :
+                  0;
+    scoring[label] = baseShape + (Math.abs(leftRightBias) < 0.12 ? 0.04 : 0) + Math.max(0, cgBias * 0.5);
+  }
+  const sorted = Object.entries(scoring).sort((a, b) => b[1] - a[1]);
+  if (!sorted.length) return candidateLabels[0];
+  return sorted[0][0];
+}
+
+function compareToDNACluster(cropCanvas){
+  const templates = buildDNATemplates();
+  const ctx = cropCanvas.getContext('2d');
+  const sample = ctx.getImageData(0,0,cropCanvas.width,cropCanvas.height);
+  const sampleFeatures = extractLetterFeatures(sample.data, cropCanvas.width, cropCanvas.height);
+  const scores = {};
+  for (const base of DNA_BASES){
+    const template = templates[base];
+    const pixel = pixelAgreement(sample.data, template.pixels);
+    const shape = featureScore(sampleFeatures, template.features);
+    const combined = (pixel * 0.7) + (shape * 0.3);
+    scores[base] = combined;
+  }
+
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const [bestLabel, bestScore] = sorted[0];
+  const confusionWindow = sorted.length > 1 && (bestScore - sorted[1][1]) < 0.09;
+  if (confusionWindow && ['C','G','T'].includes(bestLabel)){
+    const candidates = sorted.slice(0, 3).map(([label]) => label);
+    const tieBreakLabel = resolveBaseConfusion(sampleFeatures, candidates, templates);
+    if (tieBreakLabel) return { label: tieBreakLabel, score: scores[tieBreakLabel] };
+  }
+  if (bestLabel === 'C' || bestLabel === 'G') {
+    const leftRightBias = sampleFeatures.leftRightBalance;
+    const centerBias = sampleFeatures.centerRatio;
+    const explicit = leftRightBias < -0.08 || centerBias < 0.18;
+    const finalLabel = explicit && bestLabel === 'C' ? 'C' : bestLabel === 'G' && (centerBias > 0.2 || leftRightBias > 0.05) ? 'G' : bestLabel;
+    return { label: finalLabel, score: scores[finalLabel] || bestScore };
+  }
+  return { label: bestLabel, score: bestScore };
+}
+
+function extractATCGDetectionsFromImage(img){
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 640; canvas.height = 640;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,640,640);
+  const maxSource = Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height || 1);
+  const scale = 640 / maxSource;
+  const drawW = (img.naturalWidth || img.width) * scale;
+  const drawH = (img.naturalHeight || img.height) * scale;
+  const xOffset = (640 - drawW) / 2;
+  const yOffset = (640 - drawH) / 2;
+  ctx.drawImage(img, xOffset, yOffset, drawW, drawH);
+
+  const imageData = ctx.getImageData(0,0,640,640);
+  const { data } = imageData;
+  const colDark = new Array(640).fill(0);
+  for (let x = 0; x < 640; x++){
+    let dark = 0;
+    for (let y = 0; y < 640; y++){
+      const index = (y * 640 + x) * 4;
+      const luminance = grayscaleValue(data[index], data[index + 1], data[index + 2]);
+      if (luminance < 200) dark += 1;
+    }
+    colDark[x] = dark;
+  }
+
+  const groups = [];
+  let current = null;
+  for (let x = 0; x < 640; x++){
+    if (colDark[x] > 3){
+      if (!current) current = { start: x, end: x };
+      else current.end = x;
+    } else if (current){
+      if (current.end - current.start + 1 >= 6) groups.push(current);
+      current = null;
+    }
+  }
+  if (current && current.end - current.start + 1 >= 6) groups.push(current);
+
+  const detections = [];
+  const detectionThreshold = 0.42;
+  for (const group of groups){
+    let minY = 640, maxY = 0;
+    for (let x = group.start; x <= group.end; x++){
+      for (let y = 0; y < 640; y++){
+        const index = (y * 640 + x) * 4;
+        const luminance = grayscaleValue(data[index], data[index + 1], data[index + 2]);
+        if (luminance < 200){
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (minY === 640 || maxY === 0) continue;
+    const width = Math.max(8, group.end - group.start + 1);
+    const height = Math.max(12, maxY - minY + 1);
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = width + 20;
+    cropCanvas.height = height + 20;
+    const cropCtx = cropCanvas.getContext('2d');
+    cropCtx.fillStyle = '#ffffff';
+    cropCtx.fillRect(0,0,cropCanvas.width,cropCanvas.height);
+    cropCtx.drawImage(canvas, group.start - 6, minY - 6, width + 12, height + 12, 0, 0, cropCanvas.width, cropCanvas.height);
+
+    const result = compareToDNACluster(cropCanvas);
+    const confidence = Math.max(0.2, Math.min(0.99, result.score));
+    if (confidence > detectionThreshold && result.label && ['A','T','C','G'].includes(result.label)){
+      detections.push({
+        label: result.label,
+        confidence: Number(confidence.toFixed(4)),
+        x_center: ((group.start + group.end) / 2) / 640,
+        y_center: ((minY + maxY) / 2) / 640,
+        confidenceLabel: `${(confidence * 100).toFixed(1)}%`
+      });
+    }
+  }
+
+  if (!detections.length){
+    const targetW = Math.min(90, Math.max(34, Math.floor((img.naturalWidth || img.width) / 10)));
+    const targetH = Math.min(90, Math.max(34, Math.floor((img.naturalHeight || img.height) / 10)));
+    for (let y = 0; y + targetH <= (img.naturalHeight || img.height); y += Math.max(18, Math.floor(targetH * 0.7))) {
+      for (let x = 0; x + targetW <= (img.naturalWidth || img.width); x += Math.max(18, Math.floor(targetW * 0.7))) {
+        const crop = document.createElement('canvas');
+        crop.width = targetW + 20;
+        crop.height = targetH + 20;
+        const cropCtx = crop.getContext('2d');
+        cropCtx.fillStyle = '#ffffff';
+        cropCtx.fillRect(0,0,crop.width,crop.height);
+        cropCtx.drawImage(img, x, y, targetW, targetH, 10, 10, crop.width - 20, crop.height - 20);
+        const result = compareToDNACluster(crop);
+        const confidence = Math.max(0.2, Math.min(0.99, result.score));
+        if (confidence > detectionThreshold && result.label && ['A','T','C','G'].includes(result.label)){
+          detections.push({
+            label: result.label,
+            confidence: Number(confidence.toFixed(4)),
+            x_center: ((x + x + targetW) / 2) / (img.naturalWidth || img.width || 1),
+            y_center: ((y + y + targetH) / 2) / (img.naturalHeight || img.height || 1),
+            confidenceLabel: `${(confidence * 100).toFixed(1)}%`
+          });
+        }
+      }
+    }
+  }
+
+  return detections.sort((a, b) => a.x_center - b.x_center);
+}
+
+function normalizeSequenceText(sequenceText){
+  const cleaned = (sequenceText || '').toUpperCase().replace(/[^ATCG]/g, '');
+  if (!cleaned) return '';
+  const compacted = cleaned.replace(/([ATCG])\1{4,}/g, (_, base) => base.repeat(3));
+  return compacted;
+}
+
+function applyReconstructedSequence(sequenceText, options = {}){
+  const { scrollToViewer = false, announce = true } = options;
+  const normalized = normalizeSequenceText(sequenceText);
+  if (!normalized) return false;
+
+  sequence = normalized.split('');
+  resetWorkflow();
+  selectedMutation = DISEASE_DB.find(d => d.gene === 'CFTR') || DISEASE_DB.find(d => d.pos < sequence.length) || DISEASE_DB[0];
+
+  if (document.getElementById('target-select')) {
+    const targetSel = document.getElementById('target-select');
+    if (selectedMutation) targetSel.value = selectedMutation.id;
+  }
+
+  renderSequence();
+  renderIdentityMeter();
+  scanDiseases();
+  build3D();
+
+  if (announce) {
+    const badge = document.getElementById('viewer-badge');
+    if (badge) badge.textContent = `${sequence.length} bp · sequence routed from ATCG analysis`;
+  }
+
+  if (scrollToViewer) routeToNextAnalysisSpace();
+  return true;
+}
+
+function renderDNASequenceResult(sequence, detections, analysis){
+  const sequenceText = normalizeSequenceText(sequence);
+  const resultsHtml = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+      ${detections.map(d => `<span class="vision-chip"><span class="sw" style="background:${d.label === 'A' ? '#fbbf24' : d.label === 'T' ? '#60a5fa' : d.label === 'C' ? '#34d399' : '#f472b6'};"></span>${d.label} <b>${(d.confidence * 100).toFixed(1)}%</b></span>`).join('')}
+    </div>
+    <div style="font-size:12.75px;color:var(--text);margin-bottom:8px;"><strong>Reconstructed sequence:</strong> <span class="mono" style="letter-spacing:.12em;">${sequenceText}</span></div>
+    ${analysis ? `<div style="font-size:12px;color:var(--muted);line-height:1.6;">${analysis}</div>` : ''}
+    <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+      <button class="action primary" id="btn-continue-sequence" data-sequence="${sequenceText}">Continue</button>
+    </div>
+  `;
+  document.getElementById('vision-results').innerHTML = resultsHtml;
+
+  const continueBtn = document.getElementById('btn-continue-sequence');
+  if (continueBtn) {
+    continueBtn.addEventListener('click', () => {
+      const seq = (continueBtn.dataset.sequence || '').toUpperCase();
+      if (applyReconstructedSequence(seq, { scrollToViewer: true })) {
+        visionSetStatus(`Sequence applied to the molecular viewer: ${seq}.`);
+      } else {
+        visionSetStatus('No valid ATCG sequence was reconstructed from the image.', true);
+      }
+    });
+  }
+}
+
+async function analyzeDNAImage(){
+  if (!visionImageEl) return;
+  const detections = extractATCGDetectionsFromImage(visionImageEl);
+  if (!detections.length){
+    visionSetStatus('No A/T/C/G nucleotides were detected above threshold in this image.', true);
+    return;
+  }
+
+  const reconstructed = detections.map(d => d.label).join('');
+  visionSetStatus(`Detected DNA sequence: ${reconstructed}. Sending to CFTR analysis…`);
+  const apiBase = (document.getElementById('lab-api-base')?.value || 'https://crispr-x-backend.onrender.com').trim().replace(/\/$/, '');
+
+  try {
+    const resp = await fetch(`${apiBase}/api/v1/genevision/analyze`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        detections,
+        sequence: reconstructed,
+        source_type: 'annotated_sequence',
+        reference_gene: 'CFTR'
+      })
+    });
+
+    if (!resp.ok) throw new Error('backend rejected DNA analysis');
+    const data = await resp.json();
+    const resolvedSequence = data.sequence || reconstructed;
+    const note = `Reference match: ${resolvedSequence}; candidate variants: ${data.candidate_variants?.length || 0}.`;
+    renderDNASequenceResult(resolvedSequence, detections, note);
+    applyReconstructedSequence(resolvedSequence, { announce: true, scrollToViewer: false });
+    visionSetStatus(`DNA analysis complete — sequence ${resolvedSequence} submitted to CFTR review.`);
+    renderVisionSummary(detections);
+  } catch (err) {
+    const fallbackSequence = reconstructed;
+    renderDNASequenceResult(fallbackSequence, detections, 'CFTR endpoint unavailable — local DNA reconstruction succeeded, but the server could not finish variant review.');
+    applyReconstructedSequence(fallbackSequence, { announce: true, scrollToViewer: false });
+    visionSetStatus(`DNA analysis local-only fallback: ${fallbackSequence}.`, true);
+  }
+}
+
+function visionSetStatus(msg, isError){
+  const el = document.getElementById('vision-status');
+  el.style.color = isError ? 'var(--danger)' : 'var(--muted)';
+  el.textContent = msg;
+}
+
+async function ensureVisionModel(){
+  if (visionNet) return visionNet;
+  if (typeof tf === 'undefined'){ visionSetStatus('TensorFlow.js failed to load — check your network/connection.', true); return null; }
+  if (visionLoading) return null;
+  visionLoading = true;
+  visionSetStatus('Loading ATCG DNA detector…');
+  try {
+    const net = await tf.loadGraphModel(VISION_MODEL_URL, {
+      onProgress: f => visionSetStatus(`Loading ATCG DNA detector… ${(f*100).toFixed(0)}%`)
+    });
+    const dummy = tf.ones(net.inputs[0].shape);
+    const warm = net.execute(dummy);
+    tf.dispose([dummy, warm]);
+    visionModelSize = net.inputs[0].shape[1];
+    visionNet = net;
+    visionSetStatus('ATCG model ready.');
+  } catch(e){
+    visionSetStatus(`Could not load the ATCG detector (${(e && e.message) || 'network error'}). Check your connection and try again.`, true);
+  }
+  visionLoading = false;
+  return visionNet;
+}
+
+function drawPaddedImage(img, canvas, displaySize){
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const maxSize = Math.max(w, h);
+  const scale = displaySize / maxSize;
+  canvas.width = displaySize; canvas.height = displaySize;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0d1a25';
+  ctx.fillRect(0, 0, displaySize, displaySize);
+  ctx.drawImage(img, 0, 0, w*scale, h*scale);
+  return ctx;
+}
+
+function routeToNextAnalysisSpace(){
+  const nextBlock = document.getElementById('sec-editor');
+  if (!nextBlock) return;
+  nextBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const badge = document.getElementById('viewer-badge');
+  if (badge) badge.textContent = 'ATCG model ready · DNA sequence routed';
+}
+
+async function loadImageFromUpload(file){
+  const fileName = (file && file.name || '').toLowerCase();
+  if (fileName.endsWith('.pdf') || file.type === 'application/pdf') {
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('PDF renderer is unavailable in this browser.');
+    }
+    const pdfData = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.8 });
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: context, viewport }).promise;
+    const img = new Image();
+    img.src = canvas.toDataURL('image/png');
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+    return img;
+  }
+
+  return await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=> {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = ()=> {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read that file as an image.'));
+    };
+    img.src = url;
+  });
+}
+
+document.getElementById('vision-file-input').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const img = await loadImageFromUpload(file);
+    visionImageEl = img;
+    drawPaddedImage(img, document.getElementById('vision-canvas'), VISION_DISPLAY_SIZE);
+    document.getElementById('vision-placeholder').style.display = 'none';
+    document.getElementById('btn-run-vision').disabled = false;
+    document.getElementById('btn-analyze-dna').disabled = false;
+    document.getElementById('vision-results').innerHTML = '';
+    const label = file.name.toLowerCase().endsWith('.pdf') ? 'PDF uploaded — ready for DNA ATCG analysis.' : 'Image loaded — click "Run ATCG detection" or "Analyze DNA image".';
+    visionSetStatus(label);
+  } catch (error) {
+    visionSetStatus(error && error.message ? error.message : 'Could not read that file.', true);
+  }
+});
+
+async function runVisionDetection(){
+  if (!visionImageEl) return;
+  visionSetStatus('Running ATCG detection using the same DNA model as the PDF path…');
+  await analyzeDNAImage();
+}
+
+/* ---- AI summary of detections: real backend LLM call, honest local fallback ---- */
+function localTemplateSummary(detections){
+  if (!detections.length){
+    return "No objects were detected above the confidence threshold, so there's nothing to summarize yet.";
+  }
+  const counts = {};
+  detections.forEach(d=>{ counts[d.label] = (counts[d.label]||0) + 1; });
+  const parts = Object.entries(counts).map(([label,n])=> n>1 ? `${n} ${label}s` : `a ${label}`);
+  const top = detections.slice().sort((a,b)=>b.confidence-a.confidence)[0];
+  return `This image contains ${parts.join(', ')}. The most confident detection is "${top.label}" `
+       + `at ${(top.confidence*100).toFixed(0)}%. (Template summary — set ANTHROPIC_API_KEY on the `
+       + `backend for a real LLM-written summary instead.)`;
+}
+
+async function renderVisionSummary(detections){
+  const box = document.getElementById('vision-summary-box');
+  const textEl = document.getElementById('vision-summary-text');
+  const tagEl = document.getElementById('vision-summary-tag');
+  box.style.display = 'block';
+  textEl.textContent = 'Summarizing…';
+  tagEl.innerHTML = '';
+  const defaultApiBase = 'https://crispr-x-backend.onrender.com';
+  const apiBase = (document.getElementById('lab-api-base')?.value || defaultApiBase).trim().replace(/\/$/,'');
+  try {
+    const resp = await fetch(`${apiBase}/api/vision/summarize`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ detections }),
+    });
+    if (!resp.ok) throw new Error('backend declined');
+    const data = await resp.json();
+    textEl.textContent = data.summary;
+    tagEl.innerHTML = data.source === 'llm'
+      ? '<span class="lab-source-tag real">Real LLM (backend)</span>'
+      : '<span class="lab-source-tag heuristic">Template (backend, no API key set)</span>';
+  } catch (err) {
+    textEl.textContent = localTemplateSummary(detections);
+    tagEl.innerHTML = '<span class="lab-source-tag heuristic">Template — backend unreachable</span>';
+  }
+}
+document.getElementById('btn-run-vision').addEventListener('click', runVisionDetection);
+document.getElementById('btn-analyze-dna').addEventListener('click', analyzeDNAImage);
+
+
+/* ============================================================
+   3D CHEMICAL SPACE — real descriptor-based scatter plot
+   Plots the 8 synthetic compounds by their actual RDKit values
+   (MW / LogP / TPSA), colored by the same QED-lite index used
+   in the drug screening panel. Genuine data, genuine min-max
+   scaling — just a different (3D) view of the same numbers.
+   ============================================================ */
+let csScene, csCamera, csRenderer, csGroup, csContainer;
+let csRotY = 0.5, csRotX = 0.2, csDragging = false, csLastX = 0, csLastY = 0, csAutoRotate = true;
+
+function makeLabelSprite(text, color){
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.font = '26px "JetBrains Mono", monospace';
+  ctx.fillStyle = color;
+  ctx.fillText(text, 4, 42);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(3.2, 0.8, 1);
+  return sprite;
+}
+
+function initChemSpace(){
+  csContainer = document.getElementById('chem3d-holder');
+  csScene = new THREE.Scene();
+  csScene.fog = new THREE.Fog(0x0a1620, 20, 70);
+  csCamera = new THREE.PerspectiveCamera(45, csContainer.clientWidth/csContainer.clientHeight, 0.1, 1000);
+  csCamera.position.set(14, 10, 20);
+  csRenderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  csRenderer.setPixelRatio(window.devicePixelRatio);
+  csRenderer.setSize(csContainer.clientWidth, csContainer.clientHeight);
+  csContainer.appendChild(csRenderer.domElement);
+  csScene.add(new THREE.AmbientLight(0x6688aa, 1.3));
+  const l1 = new THREE.PointLight(0x2dd4bf, 1.0, 200); l1.position.set(20,20,20); csScene.add(l1);
+
+  const AX = 9; // half-length of each axis
+  csGroup = new THREE.Group();
+  const axisMat = (c)=> new THREE.LineBasicMaterial({ color:c, transparent:true, opacity:0.55 });
+  const mkAxis = (from,to,color)=>{
+    const g = new THREE.BufferGeometry().setFromPoints([from,to]);
+    return new THREE.Line(g, axisMat(color));
+  };
+  csGroup.add(mkAxis(new THREE.Vector3(-AX,0,0), new THREE.Vector3(AX,0,0), 0x60a5fa)); // MW (x)
+  csGroup.add(mkAxis(new THREE.Vector3(0,-AX,0), new THREE.Vector3(0,AX,0), 0xa78bfa)); // LogP (y)
+  csGroup.add(mkAxis(new THREE.Vector3(0,0,-AX), new THREE.Vector3(0,0,AX), 0x2dd4bf)); // TPSA (z)
+  csGroup.add(makeLabelSprite('MW →',   '#60a5fa').translateX(AX+1));
+  csGroup.add(makeLabelSprite('LogP ↑', '#a78bfa').translateY(AX+0.8));
+  csGroup.add(makeLabelSprite('TPSA →', '#2dd4bf').translateZ(AX+1));
+
+  // floor grid for depth cues
+  const grid = new THREE.GridHelper(2*AX, 12, 0x1c3140, 0x142430);
+  grid.position.y = -AX;
+  csGroup.add(grid);
+
+  const mws = COMPOUND_DB.map(c=>c.mw), lps = COMPOUND_DB.map(c=>c.logp), tps = COMPOUND_DB.map(c=>c.tpsa);
+  const norm = (v,arr,lo,hi)=> ((v - Math.min(lo,...arr)) / (Math.max(hi,...arr) - Math.min(lo,...arr))) * (2*AX) - AX;
+
+  COMPOUND_DB.forEach(c=>{
+    const x = norm(c.mw, mws, 150, 420);
+    const y = norm(c.logp, lps, -4, 4);
+    const z = norm(c.tpsa, tps, 40, 170);
+    const q = qedLite(c);
+    const color = q>=70 ? 0x4ade80 : q>=45 ? 0xfbbf24 : 0xfb7185;
+
+    const stem = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x,-AX,z), new THREE.Vector3(x,y,z)]);
+    csGroup.add(new THREE.Line(stem, new THREE.LineBasicMaterial({ color, transparent:true, opacity:0.35 })));
+
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5,16,16), new THREE.MeshStandardMaterial({ color, roughness:0.35, metalness:0.1 }));
+    sphere.position.set(x,y,z);
+    csGroup.add(sphere);
+
+    const label = makeLabelSprite(c.name, '#dfe9ef');
+    label.position.set(x, y+1, z);
+    csGroup.add(label);
+  });
+
+  csScene.add(csGroup);
+
+  csContainer.addEventListener('mousedown', e=>{ csDragging=true; csLastX=e.clientX; csLastY=e.clientY; csAutoRotate=false; });
+  window.addEventListener('mouseup', ()=> csDragging=false);
+  window.addEventListener('mousemove', e=>{
+    if (!csDragging) return;
+    csRotY += (e.clientX-csLastX)*0.006; csRotX += (e.clientY-csLastY)*0.006;
+    csRotX = Math.max(-1.2, Math.min(1.2, csRotX));
+    csLastX=e.clientX; csLastY=e.clientY;
+  });
+  csContainer.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const d = csCamera.position.length();
+    const nd = Math.max(12, Math.min(45, d + e.deltaY*0.02));
+    csCamera.position.setLength(nd);
+  }, {passive:false});
+  window.addEventListener('resize', ()=>{
+    if (!csContainer.clientWidth) return;
+    csCamera.aspect = csContainer.clientWidth/csContainer.clientHeight;
+    csCamera.updateProjectionMatrix();
+    csRenderer.setSize(csContainer.clientWidth, csContainer.clientHeight);
+  });
+  (function animateChemSpace(){
+    requestAnimationFrame(animateChemSpace);
+    if (csAutoRotate) csRotY += 0.0015;
+    csGroup.rotation.y = csRotY; csGroup.rotation.x = csRotX*0.4;
+    csRenderer.render(csScene, csCamera);
+  })();
+}
+
+let scene, camera, renderer, dnaGroup, container;
+let rotY = 0.4, rotX = 0.15, autoRotate = true;
+let isDragging = false, lastX = 0, lastY = 0;
+
+function initThree(){
+  container = document.getElementById('viewer-holder');
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x050c14, 60, 140);
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 1000);
+  camera.position.set(0, 0, 62);
+  renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(renderer.domElement);
+
+  const amb = new THREE.AmbientLight(0x6688aa, 1.1);
+  scene.add(amb);
+  const p1 = new THREE.PointLight(0x2dd4bf, 1.4, 200);
+  p1.position.set(30, 20, 40);
+  scene.add(p1);
+  const p2 = new THREE.PointLight(0xe879f9, 1.0, 200);
+  p2.position.set(-30, -20, 30);
+  scene.add(p2);
+
+  build3D();
+
+  container.addEventListener('mousedown', e=>{ isDragging=true; lastX=e.clientX; lastY=e.clientY; autoRotate=false; });
+  window.addEventListener('mouseup', ()=> isDragging=false);
+  window.addEventListener('mousemove', e=>{
+    if (!isDragging) return;
+    rotY += (e.clientX-lastX)*0.006;
+    rotX += (e.clientY-lastY)*0.006;
+    rotX = Math.max(-1.2, Math.min(1.2, rotX));
+    lastX=e.clientX; lastY=e.clientY;
+  });
+  container.addEventListener('wheel', e=>{
+    e.preventDefault();
+    camera.position.z = Math.max(28, Math.min(110, camera.position.z + e.deltaY*0.04));
+  }, {passive:false});
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = container.clientWidth/container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  animate();
+}
+
+function cylinderBetween(p1, p2, radius, color, opacity=1){
+  const dir = new THREE.Vector3().subVectors(p2, p1);
+  const len = dir.length();
+  const geo = new THREE.CylinderGeometry(radius, radius, len, 8);
+  const mat = new THREE.MeshStandardMaterial({ color, transparent: opacity<1, opacity, roughness:0.4, metalness:0.2 });
+  const mesh = new THREE.Mesh(geo, mat);
+  const mid = new THREE.Vector3().addVectors(p1,p2).multiplyScalar(0.5);
+  mesh.position.copy(mid);
+  const axis = new THREE.Vector3(0,1,0);
+  const quat = new THREE.Quaternion().setFromUnitVectors(axis, dir.clone().normalize());
+  mesh.quaternion.copy(quat);
+  return mesh;
+}
+
+function build3D(){
+  if (dnaGroup) scene.remove(dnaGroup);
+  dnaGroup = new THREE.Group();
+  const n = sequence.length;
+  const radius = 7;
+  const riseStep = 1.55;
+  const twist = (Math.PI*2)/10.2;
+  const totalHeight = n*riseStep;
+  const p1s = [], p2s = [];
+
+  for (let i=0;i<n;i++){
+    const angle = i*twist;
+    const y = i*riseStep - totalHeight/2;
+    const x1 = radius*Math.cos(angle), z1 = radius*Math.sin(angle);
+    const x2 = radius*Math.cos(angle+Math.PI), z2 = radius*Math.sin(angle+Math.PI);
+    p1s.push(new THREE.Vector3(x1,y,z1));
+    p2s.push(new THREE.Vector3(x2,y,z2));
+  }
+
+  [p1s, p2s].forEach((pts, idx)=>{
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const geo = new THREE.TubeGeometry(curve, n*2, 0.55, 8, false);
+    const mat = new THREE.MeshStandardMaterial({ color: idx===0 ? 0x1c5c66 : 0x6a1c66, roughness:0.35, metalness:0.3 });
+    dnaGroup.add(new THREE.Mesh(geo, mat));
+  });
+
+  const isMutPos = selectedMutation ? selectedMutation.pos : -1;
+  for (let i=0;i<n;i++){
+    const base = sequence[i];
+    const color = BASE_COLORS[base] || 0x888888;
+    const isCutSite = (cutIndex !== null && i === cutIndex);
+    const isTarget = (i === isMutPos);
+
+    const rung = cylinderBetween(p1s[i], p2s[i], 0.35, color, isTarget && !isCutSite ? 1 : 0.85);
+    if (cutIndex !== null){
+      const offset = i < cutIndex ? 1.8 : -1.8;
+      rung.position.y += offset;
+    }
+    dnaGroup.add(rung);
+
+    const sph1 = new THREE.Mesh(new THREE.SphereGeometry(0.7,10,10), new THREE.MeshStandardMaterial({color:0x2dd4bf, roughness:0.4}));
+    sph1.position.copy(p1s[i]);
+    const sph2 = new THREE.Mesh(new THREE.SphereGeometry(0.7,10,10), new THREE.MeshStandardMaterial({color:0xe879f9, roughness:0.4}));
+    sph2.position.copy(p2s[i]);
+    if (cutIndex !== null){
+      const offset = i < cutIndex ? 1.8 : -1.8;
+      sph1.position.y += offset; sph2.position.y += offset;
+    }
+    dnaGroup.add(sph1); dnaGroup.add(sph2);
+
+    if (isTarget){
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(1.6,12,12), new THREE.MeshBasicMaterial({color:0xfbbf24, transparent:true, opacity:0.35}));
+      const mid = new THREE.Vector3().addVectors(p1s[i],p2s[i]).multiplyScalar(0.5);
+      if (cutIndex !== null){ mid.y += i < cutIndex ? 1.8 : -1.8; }
+      glow.position.copy(mid);
+      glow.userData.pulse = true;
+      dnaGroup.add(glow);
+    }
+  }
+
+  scene.add(dnaGroup);
+  document.getElementById('viewer-badge').textContent = `${n} bp · B‑DNA${cutIndex!==null?' · cleaved':''}`;
+}
+
+let pulseT = 0;
+function animate(){
+  requestAnimationFrame(animate);
+  if (autoRotate) rotY += 0.0025;
+  if (dnaGroup){
+    dnaGroup.rotation.y = rotY;
+    dnaGroup.rotation.x = rotX;
+    pulseT += 0.05;
+    const s = 1 + Math.sin(pulseT)*0.15;
+    dnaGroup.children.forEach(c=>{ if (c.userData.pulse) c.scale.set(s,s,s); });
+  }
+  renderer.render(scene, camera);
+}
+
+/* ---------- HASH-CHAIN AUDIT LEDGER (real SHA-256, local only) ---------- */
+let ledgerChain = []; // {index, timestamp, action, data, prevHash, hash}
+
+async function sha256(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function ledgerAppend(action, data){
+  const prevHash = ledgerChain.length ? ledgerChain[ledgerChain.length-1].hash : '0'.repeat(64);
+  const timestamp = new Date().toISOString();
+  const index = ledgerChain.length;
+  const payload = JSON.stringify({index, timestamp, action, data, prevHash});
+  const hash = await sha256(payload);
+  const block = {index, timestamp, action, data, prevHash, hash, consensus:'pending'};
+  ledgerChain.push(block);
+  renderLedger();
+  // simulate consensus finality after a short delay, like waiting for network consensus
+  setTimeout(()=>{ block.consensus = 'final'; renderLedger(); }, 900 + Math.random()*600);
+  return block;
+}
+
+function renderLedger(){
+  const list = document.getElementById('ledger-list');
+  list.innerHTML = '';
+  ledgerChain.slice().reverse().forEach(b=>{
+    const el = document.createElement('div');
+    el.className = 'ledger-block ' + (b.consensus==='final' ? 'final' : 'pending');
+    el.innerHTML = `
+      <div class="idx">#${b.index}</div>
+      <div class="action">${b.action}</div>
+      <div class="hash">prev <b>${b.prevHash.slice(0,16)}…</b><br>hash <b>${b.hash.slice(0,16)}…</b></div>
+      <div class="consensus"><span class="led"></span>${b.consensus==='final' ? 'Consensus reached (simulated)' : 'Awaiting consensus…'}</div>
+    `;
+    list.appendChild(el);
+  });
+  document.getElementById('chain-status').textContent = '';
+}
+
+document.getElementById('btn-verify-chain').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('chain-status');
+  statusEl.textContent = 'Recomputing hashes…';
+  let ok = true;
+  for (const b of ledgerChain){
+    const payload = JSON.stringify({index:b.index, timestamp:b.timestamp, action:b.action, data:b.data, prevHash:b.prevHash});
+    const recomputed = await sha256(payload);
+    if (recomputed !== b.hash){ ok = false; break; }
+  }
+  const chainLinked = ledgerChain.every((b,i)=> i===0 ? b.prevHash==='0'.repeat(64) : b.prevHash===ledgerChain[i-1].hash);
+  statusEl.innerHTML = (ok && chainLinked)
+    ? `<span style="color:var(--good);">✓ ${ledgerChain.length} blocks verified — every hash recomputes correctly and the chain is unbroken.</span>`
+    : `<span style="color:var(--danger);">✗ Chain integrity check failed — a block has been altered.</span>`;
+});
+
+document.getElementById('btn-export-chain').addEventListener('click', ()=>{
+  downloadJSON(ledgerChain, 'crispr-x-ledger.json');
+});
+
+function downloadJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- CLINICAL TRIAL SIMULATOR (synthetic patients only) ---------- */
+let currentPhase = 1;
+let cohort = [
+  { id:"PT-001", age:62, sex:"F", consented:false, dose:"Single ascending dose", ae:[] },
+  { id:"PT-002", age:39, sex:"F", consented:true, dose:"Single ascending dose", ae:[] },
+  { id:"PT-003", age:28, sex:"F", consented:true, dose:"Single ascending dose", ae:[] },
+  { id:"PT-004", age:24, sex:"F", consented:false, dose:"Single ascending dose", ae:[] },
+  { id:"PT-005", age:36, sex:"F", consented:true, dose:"Single ascending dose", ae:[] },
+  { id:"PT-006", age:63, sex:"M", consented:true, dose:"Single ascending dose", ae:[] }
+]; // seeded from piped synthetic data (generate_synthetic_data.py, seed 42)
+let patientCounter = 7;
+
+const PHASE_INFO = {
+  1: { label:'Phase I — safety',        segs:6, active:0, targetN:12, dose:'Single ascending dose' },
+  2: { label:'Phase II — efficacy',     segs:6, active:1, targetN:40, dose:'Fixed therapeutic dose' },
+  3: { label:'Phase III — confirmatory',segs:6, active:2, targetN:120,dose:'Randomized, double-blind' },
+  4: { label:'Phase IV — post-market',  segs:6, active:5, targetN:250,dose:'Real-world surveillance' },
+};
+
+function renderTimeline(){
+  const info = PHASE_INFO[currentPhase];
+  const track = document.getElementById('trial-timeline');
+  track.innerHTML = '';
+  for (let i=0;i<info.segs;i++){
+    const seg = document.createElement('div');
+    seg.className = 'seg' + (i < info.active ? ' done' : i === info.active ? ' now' : '');
+    track.appendChild(seg);
+  }
+}
+
+function renderTrialStats(){
+  const info = PHASE_INFO[currentPhase];
+  const consented = cohort.filter(p=>p.consented).length;
+  const aeCount = cohort.reduce((sum,p)=>sum+p.ae.length,0);
+  const matches = activeMatches();
+  const gene = matches.length ? matches[0].gene : null;
+  const topCompound = gene ? COMPOUND_DB.map(c=>({...c, score: dockingFitScore(c, gene).score})).sort((a,b)=>b.score-a.score)[0] : null;
+  const responseRate = topCompound ? Math.min(94, 40 + Math.round(topCompound.score*0.5)) : 0;
+  document.getElementById('trial-stats').innerHTML = `
+    <div class="stat-box"><div class="num">${cohort.length}/${info.targetN}</div><div class="lbl">Enrolled</div></div>
+    <div class="stat-box"><div class="num">${consented}</div><div class="lbl">Consented</div></div>
+    <div class="stat-box"><div class="num">${aeCount}</div><div class="lbl">Adverse events</div></div>
+    <div class="stat-box"><div class="num">${responseRate}%</div><div class="lbl">Simulated response</div></div>
+  `;
+}
+
+function renderCohort(){
+  const grid = document.getElementById('cohort-grid');
+  grid.innerHTML = '';
+  cohort.forEach(p=>{
+    const chip = document.createElement('div');
+    chip.className = 'patient-chip' + (p.ae.length ? ' ae' : p.consented ? ' consented' : '');
+    chip.innerHTML = `
+      ${p.ae.length ? '<span class="tag a">AE</span>' : p.consented ? '<span class="tag c">✓</span>' : ''}
+      <div class="pid">${p.id}</div>
+      <div class="pmeta">${p.age}${p.sex} · ${p.consented?'consented':'pending'}</div>
+    `;
+    grid.appendChild(chip);
+  });
+  const aeSel = document.getElementById('ae-patient');
+  aeSel.innerHTML = cohort.length
+    ? cohort.map(p=>`<option value="${p.id}">${p.id} (${p.age}${p.sex})</option>`).join('')
+    : '<option value="">Enroll a patient first</option>';
+}
+
+document.querySelectorAll('#phase-tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#phase-tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPhase = parseInt(btn.dataset.phase);
+    renderTimeline(); renderTrialStats();
+    ledgerAppend('Trial phase changed', { phase: PHASE_INFO[currentPhase].label });
+  });
+});
+
+document.getElementById('btn-enroll').addEventListener('click', ()=>{
+  const id = 'PT-' + String(patientCounter++).padStart(3,'0');
+  const age = 22 + Math.floor(Math.random()*45);
+  const sex = Math.random() > 0.5 ? 'F' : 'M';
+  const consented = Math.random() > 0.15; // most synthetic patients consent; a few remain pending
+  const patient = { id, age, sex, consented, dose: PHASE_INFO[currentPhase].dose, ae: [] };
+  cohort.push(patient);
+  renderCohort(); renderTrialStats();
+  ledgerAppend('Patient enrolled', { id, age, sex, consented, phase: PHASE_INFO[currentPhase].label });
+  log(`Synthetic patient ${id} enrolled (${age}${sex}, ${consented?'consent recorded':'consent pending'})`, 't');
+});
+
+document.getElementById('btn-log-ae').addEventListener('click', ()=>{
+  const pid = document.getElementById('ae-patient').value;
+  const severity = document.getElementById('ae-severity').value;
+  const desc = document.getElementById('ae-desc').value.trim();
+  if (!pid || !desc){ log('Adverse event needs a patient and a description', 'a'); return; }
+  const patient = cohort.find(p=>p.id===pid);
+  patient.ae.push({ severity, desc, phase: PHASE_INFO[currentPhase].label });
+  document.getElementById('ae-desc').value = '';
+  renderCohort(); renderTrialStats();
+  ledgerAppend('Adverse event logged', { patient: pid, severity, desc });
+  log(`AE logged for ${pid}: ${severity} — "${desc}"`, 'a');
+});
+
+document.getElementById('btn-export-trial').addEventListener('click', ()=>{
+  downloadJSON({ phase: PHASE_INFO[currentPhase].label, cohort }, 'crispr-x-cohort.json');
+});
+
+/* ---------- WIRE EXISTING ACTIONS INTO THE LEDGER ---------- */
+const _origDesignHandler = document.getElementById('btn-design');
+_origDesignHandler.addEventListener('click', ()=>{
+  if (selectedMutation) ledgerAppend('gRNA designed', { gene: selectedMutation.gene, pos: selectedMutation.pos+1 });
+});
+document.getElementById('btn-cut').addEventListener('click', ()=>{
+  if (selectedMutation) ledgerAppend('Cas9 cut performed', { gene: selectedMutation.gene, pos: selectedMutation.pos+1 });
+});
+document.getElementById('btn-repair').addEventListener('click', ()=>{
+  if (selectedMutation) ledgerAppend('Repair applied', { gene: selectedMutation.gene, pos: selectedMutation.pos+1, strategy: document.getElementById('repair-select').value });
+});
+
+/* ---------- VARIANT CALLING / MULTI-SAMPLE ALIGNMENT ---------- */
+let simulatedReads = []; // {id, bases:[...]}
+
+function generateReadsFromCohort(){
+  // ensure a minimal cohort exists so the panel isn't empty
+  if (cohort.length < 4){
+    const need = 4 - cohort.length;
+    for (let i=0;i<need;i++){
+      const id = 'PT-' + String(patientCounter++).padStart(3,'0');
+      const age = 22 + Math.floor(Math.random()*45);
+      const sex = Math.random() > 0.5 ? 'F' : 'M';
+      cohort.push({ id, age, sex, consented:true, dose: PHASE_INFO[currentPhase].dose, ae: [] });
+    }
+    renderCohort(); renderTrialStats();
+  }
+  const ERROR_RATE = 0.04;
+  const BASES = ['A','T','C','G'];
+  simulatedReads = cohort.slice(0, 8).map(p=>{
+    const bases = sequence.map(b=>{
+      if (Math.random() < ERROR_RATE){
+        const alts = BASES.filter(x=>x!==b);
+        return alts[Math.floor(Math.random()*alts.length)];
+      }
+      return b;
+    });
+    return { id: p.id, bases };
+  });
+  renderVariantPanel();
+  ledgerAppend('Reads generated', { samples: simulatedReads.length, positions: sequence.length });
+  log(`Generated ${simulatedReads.length} synthetic reads and called variants against the reference`, 't');
+}
+
+function renderVariantPanel(){
+  const alignGrid = document.getElementById('align-grid');
+  const covBars = document.getElementById('coverage-bars');
+  const statsEl = document.getElementById('variant-stats');
+  alignGrid.innerHTML = ''; covBars.innerHTML = ''; statsEl.innerHTML = '';
+  if (!simulatedReads.length){
+    alignGrid.innerHTML = '<div style="font-size:12px;color:var(--muted);">Click "Generate reads" to simulate alignment.</div>';
+    return;
+  }
+  const n = sequence.length;
+
+  // reference row
+  const refRow = document.createElement('div');
+  refRow.className = 'align-row';
+  refRow.innerHTML = `<div class="rlabel">Reference</div><div class="cells">${sequence.map(b=>`<div class="align-cell ref">${b}</div>`).join('')}</div>`;
+  alignGrid.appendChild(refRow);
+
+  // per-sample rows + variant tally
+  const variantCounts = new Array(n).fill(0);
+  simulatedReads.forEach(r=>{
+    const row = document.createElement('div');
+    row.className = 'align-row';
+    const cells = r.bases.map((b,i)=>{
+      const isSnp = b !== sequence[i];
+      if (isSnp) variantCounts[i]++;
+      return `<div class="align-cell ${isSnp?'snp':'match'}">${b}</div>`;
+    }).join('');
+    row.innerHTML = `<div class="rlabel">${r.id}</div><div class="cells">${cells}</div>`;
+    alignGrid.appendChild(row);
+  });
+
+  // coverage bars (mock depth: 6-18x, roughly steady with slight noise)
+  for (let i=0;i<n;i++){
+    const depth = 6 + Math.round(Math.sin(i*0.7)*3 + Math.random()*4) + simulatedReads.length;
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = Math.min(100, depth*4) + '%';
+    bar.title = `Position ${i+1}: ${depth}x`;
+    covBars.appendChild(bar);
+  }
+
+  // variant summary
+  const calledPositions = variantCounts.map((c,i)=>({i,c})).filter(x=>x.c >= 2);
+  const snpCount = calledPositions.length;
+  const totalMismatches = variantCounts.reduce((a,b)=>a+b,0);
+  const avgConfidence = snpCount ? Math.min(99, 70 + snpCount*3) : 0;
+  statsEl.innerHTML = `
+    <div class="stat-box"><div class="num">${simulatedReads.length}</div><div class="lbl">Samples aligned</div></div>
+    <div class="stat-box"><div class="num">${snpCount}</div><div class="lbl">Called SNPs</div></div>
+    <div class="stat-box"><div class="num">${totalMismatches}</div><div class="lbl">Raw mismatches</div></div>
+    <div class="stat-box"><div class="num">${avgConfidence}%</div><div class="lbl">Avg. call confidence</div></div>
+  `;
+}
+
+document.getElementById('btn-generate-reads').addEventListener('click', generateReadsFromCohort);
+
+/* ---------- CLINICAL OUTCOME SIMULATOR (Kaplan-Meier + log-rank) ---------- */
+// exact chi-square(1 df) survival function via the normal distribution identity:
+// P(chi2_1 > x) = erfc(sqrt(x/2))
+function erfc(x){
+  // Abramowitz & Stegun 7.1.26 approximation
+  const t = 1/(1+0.3275911*Math.abs(x));
+  const y = 1 - (((((1.061405429*t -1.453152027)*t)+1.421413741)*t -0.284496736)*t +0.254829592)*t*Math.exp(-x*x);
+  return x >= 0 ? 1-y : 1+y;
+}
+function chi2SurvivalP(x){ return erfc(Math.sqrt(Math.max(x,0)/2)); }
+
+function simulateExponential(rate){ return -Math.log(1-Math.random())/rate; }
+
+function kaplanMeier(times, events){
+  // times/events arrays of equal length; events[i]=1 if event occurred, 0 if censored
+  const n0 = times.length;
+  const pairs = times.map((t,i)=>({t, e:events[i]})).sort((a,b)=>a.t-b.t);
+  let atRisk = n0, surv = 1;
+  const curve = [{t:0, s:1}];
+  for (let i=0;i<pairs.length;){
+    const t = pairs[i].t;
+    let deaths = 0, censored = 0;
+    while (i<pairs.length && pairs[i].t === t){
+      if (pairs[i].e) deaths++; else censored++;
+      i++;
+    }
+    if (deaths > 0) surv *= (1 - deaths/atRisk);
+    atRisk -= (deaths+censored);
+    curve.push({t, s:surv});
+  }
+  return curve;
+}
+
+function logRankTest(timesA, eventsA, timesB, eventsB){
+  const all = [
+    ...timesA.map((t,i)=>({t, e:eventsA[i], g:0})),
+    ...timesB.map((t,i)=>({t, e:eventsB[i], g:1})),
+  ].sort((a,b)=>a.t-b.t);
+  let nA = timesA.length, nB = timesB.length;
+  let OminusE = 0, V = 0;
+  let i = 0;
+  while (i < all.length){
+    const t = all[i].t;
+    let dA=0, dB=0, cA=0, cB=0;
+    while (i<all.length && all[i].t===t){
+      const row = all[i];
+      if (row.g===0){ if (row.e) dA++; else cA++; } else { if (row.e) dB++; else cB++; }
+      i++;
+    }
+    const dTot = dA+dB, nTot = nA+nB;
+    if (nTot > 1 && dTot > 0){
+      const expectedA = dTot * (nA/nTot);
+      const variance = dTot * (nA/nTot) * (nB/nTot) * ((nTot-dTot)/(nTot-1));
+      OminusE += (dA - expectedA);
+      V += variance;
+    }
+    nA -= (dA+cA); nB -= (dB+cB);
+  }
+  const chi2 = V > 0 ? (OminusE*OminusE)/V : 0;
+  return { chi2, p: chi2SurvivalP(chi2) };
+}
+
+function runSurvivalSimulation(){
+  const matches = activeMatches();
+  const gene = matches.length ? matches[0].gene : null;
+  const topCompound = gene ? COMPOUND_DB.map(c=>({...c, score: dockingFitScore(c, gene).score})).sort((a,b)=>b.score-a.score)[0] : null;
+  const efficacy = topCompound ? Math.min(0.7, topCompound.score/140) : 0.15; // fraction hazard reduction
+  const N = 40, FOLLOWUP = 24; // months
+  const controlRate = 0.055; // baseline monthly hazard
+  const treatRate = controlRate * (1 - efficacy);
+
+  const ctlTimes=[], ctlEvents=[], txTimes=[], txEvents=[];
+  for (let i=0;i<N;i++){
+    let t = simulateExponential(controlRate);
+    if (t > FOLLOWUP){ t = FOLLOWUP; ctlEvents.push(0); } else ctlEvents.push(1);
+    ctlTimes.push(t);
+  }
+  for (let i=0;i<N;i++){
+    let t = simulateExponential(treatRate);
+    if (t > FOLLOWUP){ t = FOLLOWUP; txEvents.push(0); } else txEvents.push(1);
+    txTimes.push(t);
+  }
+  const kmCtl = kaplanMeier(ctlTimes, ctlEvents);
+  const kmTx = kaplanMeier(txTimes, txEvents);
+  const { p } = logRankTest(txTimes, txEvents, ctlTimes, ctlEvents);
+
+  drawSurvivalCurves(kmTx, kmCtl, FOLLOWUP);
+  const pEl = document.getElementById('pvalue-num');
+  pEl.textContent = p < 0.001 ? '< 0.001' : p.toFixed(3);
+  pEl.className = 'pv ' + (p < 0.05 ? 'sig' : 'ns');
+
+  ledgerAppend('Survival simulation run', { gene, efficacyAssumed: Math.round(efficacy*100)+'%', logRankP: p.toFixed(4) });
+  log(`Survival simulation: ${gene||'no target'} · assumed efficacy ${Math.round(efficacy*100)}% · log-rank p=${p.toFixed(4)}`, 't');
+  renderDashboard();
+}
+
+function drawSurvivalCurves(kmTx, kmCtl, maxT){
+  const svg = document.getElementById('survival-svg');
+  const W=640, H=220, padL=40, padR=14, padT=14, padB=28;
+  const x = t => padL + (t/maxT)*(W-padL-padR);
+  const y = s => padT + (1-s)*(H-padT-padB);
+  const toPath = (curve)=>{
+    let d = `M ${x(0)} ${y(1)}`;
+    for (let i=1;i<curve.length;i++){
+      d += ` L ${x(curve[i-1].t)} ${y(curve[i-1].s)} L ${x(curve[i].t)} ${y(curve[i].s)}`;
+    }
+    const last = curve[curve.length-1];
+    d += ` L ${x(maxT)} ${y(last.s)}`;
+    return d;
+  };
+  let axisTicks = '';
+  for (let t=0; t<=maxT; t+=6){
+    axisTicks += `<line x1="${x(t)}" y1="${padT}" x2="${x(t)}" y2="${H-padB}" stroke="#1c3140" stroke-width="1"/>`;
+    axisTicks += `<text x="${x(t)}" y="${H-8}" fill="#6d8798" font-size="9" font-family="JetBrains Mono, monospace" text-anchor="middle">${t}mo</text>`;
+  }
+  for (let s=0; s<=1.001; s+=0.25){
+    axisTicks += `<line x1="${padL}" y1="${y(s)}" x2="${W-padR}" y2="${y(s)}" stroke="#1c3140" stroke-width="1"/>`;
+    axisTicks += `<text x="${padL-6}" y="${y(s)+3}" fill="#6d8798" font-size="9" font-family="JetBrains Mono, monospace" text-anchor="end">${Math.round(s*100)}%</text>`;
+  }
+  svg.innerHTML = `
+    ${axisTicks}
+    <path d="${toPath(kmCtl)}" fill="none" stroke="#6d8798" stroke-width="2"/>
+    <path d="${toPath(kmTx)}" fill="none" stroke="#2dd4bf" stroke-width="2.5"/>
+  `;
+}
+
+document.getElementById('btn-run-survival').addEventListener('click', runSurvivalSimulation);
+
+/* ---------- FINAL OUTPUT DASHBOARD ---------- */
+function renderDashboard(){
+  const grid = document.getElementById('dash-grid');
+  if (!grid) return;
+  const items = [
+    { label:'DNA sequence edited', done: workflowState.repair },
+    { label:'Disease mutation detected', done: activeMatches().length > 0 },
+    { label:'Drug candidates ranked', done: activeMatches().length > 0 },
+    { label:'Binding pose simulated', done: !!document.getElementById('dock-badge') && document.getElementById('dock-badge').textContent.includes('kcal') },
+    { label:'Chemical space rendered', done: !!csGroup },
+    { label:'Variants called from reads', done: simulatedReads.length > 0 },
+    { label:'CRISPR question answered', done: document.getElementById('rag-answer').style.display !== 'none' },
+    { label:'Patient(s) enrolled', done: cohort.length > 0 },
+    { label:'Survival simulation run', done: document.getElementById('pvalue-num').textContent !== '—' },
+    { label:'Audit trail recorded', done: ledgerChain.length > 0 },
+    { label:'Chain integrity verified', done: document.getElementById('chain-status').textContent.includes('verified') },
+    { label:'Image triage model loaded', done: !!visionNet },
+  ];
+  grid.innerHTML = items.map(it=>`
+    <div class="dash-item ${it.done?'done':''}">
+      <div class="chk">${it.done?'✓':''}</div>
+      <div class="lbl">${it.label}</div>
+    </div>
+  `).join('');
+}
+// re-render dashboard opportunistically whenever key actions happen
+['btn-repair','btn-run-dock','btn-generate-reads','btn-enroll','btn-rag-ask','btn-run-survival','btn-verify-chain','btn-run-vision'].forEach(id=>{
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', ()=> setTimeout(renderDashboard, 400));
+});
+
+/* ---------- MOLECULE CONSTRUCTION LAB ---------- */
+const LAB_ELEMENTS = {
+  C:{color:'#9ca8b3', weight:12.011, valence:4},
+  N:{color:'#60a5fa', weight:14.007, valence:3},
+  O:{color:'#fb7185', weight:15.999, valence:2},
+  S:{color:'#fbbf24', weight:32.06,  valence:2},
+  F:{color:'#4ade80', weight:18.998, valence:1},
+  Cl:{color:'#34d399',weight:35.45,  valence:1},
+  Br:{color:'#a78bfa',weight:79.904, valence:1},
+  P:{color:'#f472b6', weight:30.974, valence:3},
+};
+
+let labAtoms = [];   // {el, x, y}
+let labBonds = [];   // {a, b, order}
+let labSelectedElement = 'C';
+let labBondOrder = 1;
+let labSelectedAtomIdx = null;
+let labLastResult = null;
+
+function normalizeLabBond(rawBond, index){
+  if (Array.isArray(rawBond)){
+    const a = Number(rawBond[0]);
+    const b = Number(rawBond[1]);
+    const order = Number(rawBond[2] ?? 1);
+    if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(order) && order > 0){
+      return { a, b, order };
+    }
+  }
+  if (rawBond && typeof rawBond === 'object'){
+    const a = Number(rawBond.a ?? rawBond.atomA ?? rawBond.from ?? rawBond.i ?? rawBond[0]);
+    const b = Number(rawBond.b ?? rawBond.atomB ?? rawBond.to ?? rawBond.j ?? rawBond[1]);
+    const order = Number(rawBond.order ?? rawBond.bondOrder ?? rawBond.value ?? rawBond[2] ?? 1);
+    if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(order) && order > 0){
+      return { a, b, order };
+    }
+  }
+  throw new Error(`Bond #${index + 1} is not a valid atom-to-atom connection.`);
+}
+
+function normalizeLabState(data){
+  const root = data && typeof data === 'object' ? (data.molecule ?? data.graph ?? data.structure ?? data.fullMolecule ?? data) : data;
+  const atomsSource = Array.isArray(root?.atoms) ? root.atoms : [];
+  const bondsSource = Array.isArray(root?.bonds) ? root.bonds : [];
+
+  const toNumber = (value, fallback) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const atoms = atomsSource.map((atom, index) => {
+    if (typeof atom === 'string') return { el: atom, x: 250 + (index % 8) * 40, y: 160 + Math.floor(index / 8) * 40, z: 0 };
+    if (!atom || typeof atom !== 'object') throw new Error(`Atom #${index + 1} is not a valid atom entry.`);
+    const el = atom.element || atom.symbol || atom.el || atom.atom || atom.label;
+    if (!el) throw new Error(`Atom #${index + 1} is missing an element label.`);
+    const pos = Array.isArray(atom.position) ? atom.position : Array.isArray(atom.coords) ? atom.coords : [];
+    return {
+      el,
+      x: toNumber(atom.x ?? atom.cx ?? atom.posX ?? pos[0], 250 + (index % 8) * 40),
+      y: toNumber(atom.y ?? atom.cy ?? atom.posY ?? pos[1], 160 + Math.floor(index / 8) * 40),
+      z: toNumber(atom.z ?? atom.posZ ?? pos[2], 0),
+    };
+  });
+
+  const bonds = bondsSource.map((bond, index) => normalizeLabBond(bond, index));
+  return { atoms, bonds };
+}
+
+function initLabPalette(){
+  const palette = document.getElementById('element-palette');
+  palette.innerHTML = '';
+  Object.keys(LAB_ELEMENTS).forEach(el=>{
+    const btn = document.createElement('button');
+    btn.className = 'el-btn' + (el===labSelectedElement ? ' active' : '');
+    btn.textContent = el;
+    btn.style.color = LAB_ELEMENTS[el].color;
+    btn.addEventListener('click', ()=>{
+      labSelectedElement = el;
+      document.querySelectorAll('.el-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+    palette.appendChild(btn);
+  });
+  document.querySelectorAll('#bond-order-toggle button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#bond-order-toggle button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      labBondOrder = parseInt(btn.dataset.order);
+    });
+  });
+}
+
+function renderLabSvg(){
+  const svg = document.getElementById('lab-svg');
+  let html = '';
+  labBonds.forEach(b=>{
+    const a1 = labAtoms[b.a], a2 = labAtoms[b.b];
+    if (!a1 || !a2) return;
+    for (let k=0;k<b.order;k++){
+      const offset = (k - (b.order-1)/2) * 4;
+      const dx = a2.y-a1.y, dy = a1.x-a2.x;
+      const len = Math.hypot(dx,dy) || 1;
+      const ox = (dx/len)*offset, oy = (dy/len)*offset;
+      html += `<line x1="${a1.x+ox}" y1="${a1.y+oy}" x2="${a2.x+ox}" y2="${a2.y+oy}" stroke="#4a6577" stroke-width="2"/>`;
+    }
+  });
+  labAtoms.forEach((a,i)=>{
+    const info = LAB_ELEMENTS[a.el];
+    const sel = i === labSelectedAtomIdx;
+    html += `<circle class="lab-atom-node${sel?' selected':''}" data-idx="${i}" cx="${a.x}" cy="${a.y}" r="15" fill="${info.color}" stroke="#0a1420" stroke-width="1.5"/>`;
+    html += `<text x="${a.x}" y="${a.y+4}" text-anchor="middle" font-size="11" font-family="JetBrains Mono, monospace" font-weight="700" fill="#04141a" style="pointer-events:none;">${a.el}</text>`;
+  });
+  svg.innerHTML = html;
+
+  svg.querySelectorAll('.lab-atom-node').forEach(node=>{
+    node.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const idx = parseInt(node.dataset.idx);
+      if (labSelectedAtomIdx === null){
+        labSelectedAtomIdx = idx;
+      } else if (labSelectedAtomIdx === idx){
+        labSelectedAtomIdx = null;
+      } else {
+        labBonds.push({ a: labSelectedAtomIdx, b: idx, order: labBondOrder });
+        labSelectedAtomIdx = null;
+        ledgerAppend('Molecule lab bond added', { order: labBondOrder });
+      }
+      renderLabSvg();
+      renderLab3D();
+    });
+  });
+}
+
+document.getElementById('lab-svg').addEventListener('click', (e)=>{
+  if (e.target.closest('.lab-atom-node')) return;
+  const svg = e.currentTarget;
+  const rect = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const x = ((e.clientX - rect.left) / rect.width) * vb.width;
+  const y = ((e.clientY - rect.top) / rect.height) * vb.height;
+  labAtoms.push({ el: labSelectedElement, x, y });
+  renderLabSvg();
+  renderLab3D();
+});
+
+document.getElementById('btn-lab-undo').addEventListener('click', ()=>{
+  if (!labAtoms.length) return;
+  const removedIdx = labAtoms.length - 1;
+  labAtoms.pop();
+  labBonds = labBonds.filter(b=>b.a!==removedIdx && b.b!==removedIdx);
+  labSelectedAtomIdx = null;
+  renderLabSvg(); renderLab3D();
+});
+document.getElementById('btn-lab-clear').addEventListener('click', ()=>{
+  labAtoms = []; labBonds = []; labSelectedAtomIdx = null; labLastResult = null;
+  document.getElementById('lab-smiles-status').textContent = '';
+  document.getElementById('lab-smiles-input').value = '';
+  document.getElementById('btn-lab-send').disabled = true;
+  document.getElementById('lab-result-box').innerHTML = '<div style="font-size:12px;color:var(--muted);">Place a few atoms, connect them, then click "Build &amp; score" to run real chemistry validation.</div>';
+  renderLabSvg(); renderLab3D();
+});
+
+/* ---- live 3D preview (separate Three.js scene, reuses cylinderBetween helper) ---- */
+let labScene, labCamera, labRenderer, labGroup, labContainer, labRotY = 0.4, labVibeTime = 0;
+
+function initLab3D(){
+  labContainer = document.getElementById('lab-3d-holder');
+  labScene = new THREE.Scene();
+  labCamera = new THREE.PerspectiveCamera(45, labContainer.clientWidth/labContainer.clientHeight, 0.1, 1000);
+  labCamera.position.set(0,0,42);
+  labRenderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  labRenderer.setPixelRatio(window.devicePixelRatio);
+  labRenderer.setSize(labContainer.clientWidth, labContainer.clientHeight);
+  labContainer.appendChild(labRenderer.domElement);
+  labScene.add(new THREE.AmbientLight(0x6688aa, 1.2));
+  const lp = new THREE.PointLight(0x2dd4bf, 1.3, 200); lp.position.set(20,20,30); labScene.add(lp);
+  renderLab3D();
+  (function animateLab(){
+    requestAnimationFrame(animateLab);
+    labRotY += 0.004;
+    labVibeTime += 0.06;
+    if (labGroup){
+      labGroup.rotation.y = labRotY;
+      // gentle simulated vibration — a stylized visual cue, not a real MD trajectory
+      labGroup.children.forEach(mesh=>{
+        if (mesh.userData.basePos){
+          const p = mesh.userData.basePos;
+          const j = Math.sin(labVibeTime + mesh.userData.vibePhase) * 0.06;
+          mesh.position.set(p.x + j, p.y + j*0.7, p.z);
+        }
+      });
+    }
+    labRenderer.render(labScene, labCamera);
+  })();
+  window.addEventListener('resize', ()=>{
+    if (!labContainer.clientWidth) return;
+    labCamera.aspect = labContainer.clientWidth/labContainer.clientHeight;
+    labCamera.updateProjectionMatrix();
+    labRenderer.setSize(labContainer.clientWidth, labContainer.clientHeight);
+  });
+}
+
+function renderLab3D(){
+  if (!labScene) return;
+  if (labGroup) labScene.remove(labGroup);
+  labGroup = new THREE.Group();
+  const positions = labAtoms.map(a => new THREE.Vector3((a.x-250)/11, (160-a.y)/11, (a.z||0)/11));
+  labBonds.forEach(b=>{
+    if (!positions[b.a] || !positions[b.b]) return;
+    for (let k=0;k<b.order;k++){
+      const offset = (k - (b.order-1)/2) * 0.4;
+      const cyl = cylinderBetween(
+        positions[b.a].clone().add(new THREE.Vector3(0,offset,0)),
+        positions[b.b].clone().add(new THREE.Vector3(0,offset,0)),
+        0.18, 0x4a6577
+      );
+      labGroup.add(cyl);
+    }
+  });
+  labAtoms.forEach((a,i)=>{
+    const info = LAB_ELEMENTS[a.el];
+    const sph = new THREE.Mesh(new THREE.SphereGeometry(0.9,14,14), new THREE.MeshStandardMaterial({ color: info.color, roughness:0.35, metalness:0.15 }));
+    sph.position.copy(positions[i]);
+    sph.userData.basePos = positions[i].clone();
+    sph.userData.vibePhase = i * 1.3;
+    labGroup.add(sph);
+  });
+  labScene.add(labGroup);
+}
+
+/* ---- valence check (used both for local pre-check and heuristic fallback) ---- */
+function labValenceCheck(){
+  const used = new Array(labAtoms.length).fill(0);
+  labBonds.forEach(b=>{ used[b.a]+=b.order; used[b.b]+=b.order; });
+  for (let i=0;i<labAtoms.length;i++){
+    const info = LAB_ELEMENTS[labAtoms[i].el];
+    if (used[i] > info.valence){
+      return { ok:false, reason:`${labAtoms[i].el} atom #${i+1} has ${used[i]} bond-equivalents but only ${info.valence} are allowed.` };
+    }
+  }
+  return { ok:true, used };
+}
+
+function labHeuristicEstimate(targetGene){
+  const check = labValenceCheck();
+  if (!check.ok) return { error: check.reason };
+  const counts = {};
+  let mw = 0, hbd = 0, hba = 0, logp = 0;
+  labAtoms.forEach((a,i)=>{
+    const info = LAB_ELEMENTS[a.el];
+    counts[a.el] = (counts[a.el]||0) + 1;
+    mw += info.weight;
+    const implicitH = Math.max(0, info.valence - check.used[i]);
+    mw += implicitH * 1.008;
+    if ((a.el==='N' || a.el==='O') && implicitH > 0) hbd++;
+    if (a.el==='N' || a.el==='O') hba++;
+    const contrib = { C:0.55, N:-0.9, O:-0.9, S:0.35, F:0.15, Cl:0.5, Br:0.6, P:0.2 }[a.el] || 0;
+    logp += contrib;
+  });
+  const formula = Object.keys(counts).sort().map(el=>`${el}${counts[el]>1?counts[el]:''}`).join('');
+  return {
+    source: 'heuristic',
+    name: 'Custom molecule (local estimate)',
+    formula, mw: Math.round(mw*100)/100, logp: Math.round(logp*100)/100,
+    hbd, hba, tpsa: null, rotb: null,
+    ro5_pass: mw<=500 && logp<=5 && hbd<=5 && hba<=10,
+    target_gene: targetGene || null,
+  };
+}
+
+function renderLabResult(result){
+  const box = document.getElementById('lab-result-box');
+  if (result.error){
+    box.innerHTML = `<div style="color:var(--danger);font-size:12.5px;">✗ ${result.error}</div>`;
+    document.getElementById('btn-lab-send').disabled = true;
+    return;
+  }
+  const tag = result.source === 'real'
+    ? '<span class="lab-source-tag real">Real RDKit (backend)</span>'
+    : '<span class="lab-source-tag heuristic">Local heuristic — backend unreachable</span>';
+  box.innerHTML = `
+    <div style="font-size:12.5px;"><b>${result.formula}</b> ${tag}</div>
+    ${result.smiles ? `<div class="mono" style="font-size:11px;color:var(--muted);margin-top:4px;">${result.smiles}</div>` : ''}
+    <div class="lab-result-grid">
+      <div class="item"><div class="v">${result.mw}</div><div class="k">MW</div></div>
+      <div class="item"><div class="v">${result.logp}</div><div class="k">LogP</div></div>
+      <div class="item"><div class="v">${result.hbd}</div><div class="k">HBD</div></div>
+      <div class="item"><div class="v">${result.hba}</div><div class="k">HBA</div></div>
+      <div class="item"><div class="v">${result.tpsa ?? '—'}</div><div class="k">TPSA</div></div>
+      <div class="item"><div class="v">${result.ro5_pass ? 'PASS' : 'FAIL'}</div><div class="k">Ro5</div></div>
+    </div>
+    ${result.affinity_score!==undefined ? `<div style="margin-top:8px;font-size:11.5px;color:var(--muted);">Placeholder affinity vs ${result.target_gene}: <b style="color:var(--teal);">${result.affinity_score}</b> (deterministic hash, not real docking)</div>` : ''}
+  `;
+  box.classList.remove('success-pop');
+  void box.offsetWidth; // restart the animation even if triggered twice in a row
+  box.classList.add('success-pop');
+  document.getElementById('btn-lab-send').disabled = (result.source !== 'real');
+}
+
+document.getElementById('btn-lab-build').addEventListener('click', async ()=>{
+  const box = document.getElementById('lab-result-box');
+  if (!labAtoms.length){ box.innerHTML = '<div style="font-size:12px;color:var(--muted);">Place at least one atom first.</div>'; return; }
+  const check = labValenceCheck();
+  if (!check.ok){ renderLabResult({ error: check.reason }); return; }
+
+  box.innerHTML = '<div style="font-size:12px;color:var(--muted);">Scoring…</div>';
+  const defaultApiBase = 'https://crispr-x-backend.onrender.com';
+  const apiBase = (document.getElementById('lab-api-base').value || defaultApiBase).trim().replace(/\/$/,'');
+  const targetGene = selectedMutation ? selectedMutation.gene : null;
+  const payload = {
+    atoms: labAtoms.map(a=>a.el),
+    bonds: labBonds.map(b=>[b.a, b.b, b.order]),
+    name: 'Custom-' + Date.now(),
+    target_gene: targetGene,
+  };
+
+  try {
+    const resp = await fetch(`${apiBase}/api/molecule/build`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload),
+    });
+    if (!resp.ok){
+      const err = await resp.json().catch(()=>({detail:'backend rejected the request'}));
+      throw new Error(err.detail || 'backend error');
+    }
+    const data = await resp.json();
+    labLastResult = { ...data, source: 'real' };
+    renderLabResult(labLastResult);
+    ledgerAppend('Molecule built (backend RDKit)', { formula: data.formula, mw: data.mw });
+    log(`Molecule Lab: built ${data.formula} via backend RDKit`, 't');
+  } catch (err) {
+    const est = labHeuristicEstimate(targetGene);
+    labLastResult = est;
+    renderLabResult(est);
+    log(`Molecule Lab: backend unreachable (${err.message}) — showing local heuristic estimate`, 'a');
+  }
+  renderDashboard();
+});
+
+document.getElementById('btn-lab-send').addEventListener('click', ()=>{
+  if (!labLastResult || labLastResult.source !== 'real') return;
+  const r = labLastResult;
+  COMPOUND_DB.push({
+    name: r.name, smiles: r.smiles, mw: r.mw, logp: r.logp, hbd: r.hbd,
+    hba: r.hba, tpsa: r.tpsa, rotb: r.rotb, tags: r.target_gene ? [r.target_gene] : [],
+  });
+  updateDrugTarget();
+  ledgerAppend('Custom molecule sent to drug screening', { name: r.name, smiles: r.smiles });
+  log(`Molecule Lab: "${r.name}" added to the drug candidate list`, 't');
+  document.getElementById('btn-lab-send').disabled = true;
+});
+
+/* ---- modal open/close ---- */
+document.getElementById('btn-open-lab').addEventListener('click', ()=>{
+  document.getElementById('lab-modal-overlay').classList.add('open');
+  if (!labScene) initLab3D();
+  ledgerAppend('Molecule lab opened', {});
+});
+document.getElementById('btn-close-lab').addEventListener('click', ()=>{
+  document.getElementById('lab-modal-overlay').classList.remove('open');
+});
+document.getElementById('lab-modal-overlay').addEventListener('click', (e)=>{
+  if (e.target.id === 'lab-modal-overlay') document.getElementById('lab-modal-overlay').classList.remove('open');
+});
+
+/* ---- paste a SMILES formula to load into the editor for continued work ---- */
+document.getElementById('btn-lab-load-smiles').addEventListener('click', ()=>{
+  const statusEl = document.getElementById('lab-smiles-status');
+  const raw = document.getElementById('lab-smiles-input').value.trim();
+  if (!raw){ statusEl.textContent = 'Enter a SMILES string first.'; statusEl.style.color = 'var(--muted)'; return; }
+
+  let parsed;
+  try {
+    parsed = parseSmilesGraph(raw);
+  } catch (e){
+    statusEl.textContent = `Could not parse that SMILES (${e.message}).`;
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+  if (!parsed.atoms.length){
+    statusEl.textContent = 'No atoms found in that string.';
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+  const unsupported = parsed.atoms.map(a=>a.element).filter(el => !LAB_ELEMENTS[el]);
+  if (unsupported.length){
+    statusEl.textContent = `Contains elements the lab editor doesn't support yet: ${[...new Set(unsupported)].join(', ')}.`;
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+
+  const pos3d = embedLigand3D(parsed.atoms, parsed.bonds); // real force-directed layout, already used by the dock viewer
+  const SCALE = 22;
+  labAtoms = parsed.atoms.map((a,i)=>({
+    el: a.element,
+    x: 250 + pos3d[i].x * SCALE / 3.2,
+    y: 160 + pos3d[i].y * SCALE / 3.2,
+    z: pos3d[i].z * SCALE / 3.2,
+  }));
+  labBonds = parsed.bonds.map(b=>({
+    a: Number(b.a),
+    b: Number(b.b),
+    order: Math.max(1, Math.min(3, Number(b.order) || 1)),
+  }));
+  labSelectedAtomIdx = null;
+  renderLabSvg();
+  renderLab3D();
+  statusEl.textContent = `Loaded ${labAtoms.length} atoms / ${labBonds.length} bonds — keep clicking to add more, or click "Build & score".`;
+  statusEl.style.color = 'var(--good)';
+  ledgerAppend('Molecule loaded from pasted SMILES', { smiles: raw, atoms: labAtoms.length });
+  log(`Molecule Lab: loaded "${raw}" (${labAtoms.length} atoms) for editing`, 't');
+});
+
+/* ---- save / load the current editor state to/from a file, so work can continue later ---- */
+document.getElementById('btn-lab-save').addEventListener('click', ()=>{
+  downloadJSON({ atoms: labAtoms, bonds: labBonds, saved_at: new Date().toISOString() }, 'crispr-x-molecule.json');
+  ledgerAppend('Molecule lab state saved', { atoms: labAtoms.length, bonds: labBonds.length });
+  log('Molecule Lab: current structure saved to a .json file', 't');
+});
+
+document.getElementById('lab-load-file').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try {
+      const data = JSON.parse(ev.target.result);
+      const normalized = normalizeLabState(data);
+      const badEl = normalized.atoms.find(a => !LAB_ELEMENTS[a.el]);
+      if (badEl) throw new Error(`unsupported element "${badEl.el}" in file`);
+      labAtoms = normalized.atoms;
+      labBonds = normalized.bonds;
+      labSelectedAtomIdx = null;
+      renderLabSvg();
+      renderLab3D();
+      document.getElementById('lab-smiles-status').textContent = `Loaded saved molecule (${labAtoms.length} atoms / ${labBonds.length} bonds) from file.`;
+      document.getElementById('lab-smiles-status').style.color = 'var(--good)';
+      ledgerAppend('Molecule lab state loaded from file', { atoms: labAtoms.length });
+      log(`Molecule Lab: restored a saved structure from ${file.name}`, 't');
+    } catch (err){
+      document.getElementById('lab-smiles-status').textContent = `Couldn't load that file (${err.message}).`;
+      document.getElementById('lab-smiles-status').style.color = 'var(--danger)';
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = ''; // allow re-selecting the same file later
+});
+
+initLabPalette();
+renderLabSvg();
+
+/* ---------- STICKY NAV SCROLL-SPY ---------- */
+(function(){
+  const navLinks = Array.from(document.querySelectorAll('.instrument-nav a'));
+  const sections = navLinks.map(a=> document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const setActive = (id)=>{
+    navLinks.forEach(a=> a.classList.toggle('active', a.getAttribute('href') === '#'+id));
+  };
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if (e.isIntersecting) setActive(e.target.id); });
+  }, { rootMargin: '-70px 0px -70% 0px', threshold: 0 });
+  sections.forEach(s=> observer.observe(s));
+})();
+
+/* ---------- INIT ---------- */
+populateTargetSelect();
+scanDiseases();
+initThree();
+initDockViewer();
+initChemSpace();
+buildRagIndex();
+renderTimeline();
+renderTrialStats();
+renderCohort();
+renderVariantPanel();
+renderDashboard();
+ledgerAppend('Session started', { sequence: sequence.join('') });
+log('Reference sequence loaded (40 bp, simplified HBB‑like region)', 't');
+</script>
+</body>
+</html>

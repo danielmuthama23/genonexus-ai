@@ -1,0 +1,9 @@
+path: .
+train: images/train
+val: images/val
+nc: 4
+names:
+  0: A
+  1: T
+  2: C
+  3: G
