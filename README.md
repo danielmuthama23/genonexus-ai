@@ -195,4 +195,57 @@ This is a research prototype and educational platform, not a regulated clinical 
 ## Notes
 
 The repo combines a functional FastAPI application with experimental ML, synthetic-data tooling, and a browser UI. The goal is to provide a credible end-to-end prototype for genomic risk analysis, gene editing simulation, and visual sequence interpretation while clearly separating research workflows from clinical-grade use.
-# genonexus-ai
+
+## Project workflow timeline
+
+This gallery records the project progression in snapshot order, from the earliest captured workflow state to the latest. Each image reflects a chronological milestone in the app's development and UX flow.
+
+### 1) Initial workflow snapshot
+
+![Workflow snapshot 1](screenshots/Screenshot%202026-11-06%20at%2001-10-55%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 2) Early gene-risk and platform iteration
+
+![Workflow snapshot 2](screenshots/Screenshot%202026-11-06%20at%2001-11-17%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 3) Prototype refinement and interface review
+
+![Workflow snapshot 3](screenshots/Screenshot%202026-11-06%20at%2001-11-41%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 4) Continued workflow review
+
+![Workflow snapshot 4](screenshots/Screenshot%202026-11-06%20at%2001-12-06%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 5) Risk-analysis state progression
+
+![Workflow snapshot 5](screenshots/Screenshot%202026-11-06%20at%2001-12-35%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 6) Next-stage workflow capture
+
+![Workflow snapshot 6](screenshots/Screenshot%202026-11-06%20at%2001-13-06%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 7) UI progression and sequence assessment
+
+![Workflow snapshot 7](screenshots/Screenshot%202026-11-06%20at%2001-13-29%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 8) Feature polish and deeper workflow review
+
+![Workflow snapshot 8](screenshots/Screenshot%202026-11-06%20at%2001-13-45%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 9) Workflow refinement milestone
+
+![Workflow snapshot 9](screenshots/Screenshot%202026-11-06%20at%2001-14-06%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 10) Interface maturity and review
+
+![Workflow snapshot 10](screenshots/Screenshot%202026-11-06%20at%2001-14-25%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 11) Deepened platform workflow review
+
+![Workflow snapshot 11](screenshots/Screenshot%202026-11-06%20at%2001-14-53%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 12) Latest captured workflow state
+
+![Workflow snapshot 12](screenshots/Screenshot%202026-11-06%20at%2001-15-06%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+This timeline is intentionally kept lightweight and chronological so the project story is easy to follow in the repository without adding unrelated or oversized assets.
