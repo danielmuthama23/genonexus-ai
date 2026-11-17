@@ -3328,6 +3328,14 @@ renderLabSvg();
 })();
 
 /* ---------- CARRIER SCREENING NAVIGATOR ---------- */
+function getApiBase(){
+  const configured = (document.getElementById('lab-api-base')?.value || 'https://crispr-x-backend.onrender.com').trim().replace(/\/$/, '');
+  if (configured) return configured;
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : 'https://crispr-x-backend.onrender.com';
+}
+
 async function runCarrierNavigator(){
   const payload = {
     individual_a: {
@@ -3349,7 +3357,7 @@ async function runCarrierNavigator(){
 
   const outputEl = document.getElementById('carrier-navigator-output');
   try {
-    const response = await fetch('http://localhost:8000/api/v1/carrier/navigator', {
+    const response = await fetch(`${getApiBase()}/api/v1/carrier/navigator`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -3392,7 +3400,7 @@ async function buildFamilyHealthTree(){
     return;
   }
   try {
-    const response = await fetch('http://localhost:8000/api/v1/family/tree', {
+    const response = await fetch(`${getApiBase()}/api/v1/family/tree`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

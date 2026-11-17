@@ -4,6 +4,10 @@
 
 CRISPR-X Nexus is a working genomic intelligence prototype for disease screening, carrier-risk assessment, CRISPR workflow simulation, and AI-assisted DNA analysis. The repo currently includes a FastAPI backend, a static browser UI, a synthetic ATCG object-detection pipeline, and a set of verified genomic-risk and research workflows.
 
+### 13) Newly added family-planning and carrier-screening workflow
+
+![Workflow snapshot 13](screenshots/Screenshot%202026-11-17%20at%2017-58-40%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
 ## Verified status
 
 This project is currently working in the local environment and passes its automated checks.
@@ -262,8 +266,5 @@ This gallery records the project progression in snapshot order, from the earlies
 
 ![Workflow snapshot 12](screenshots/Screenshot%202026-11-06%20at%2001-15-06%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
 
-### 13) Newly added family-planning and carrier-screening workflow
-
-![Workflow snapshot 13](screenshots/Screenshot%202026-11-17%20at%2017-58-40%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
 
 This timeline is intentionally kept lightweight and chronological so the project story is easy to follow in the repository without adding unrelated or oversized assets.
