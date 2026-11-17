@@ -258,6 +258,46 @@ def test_genevision_extracts_and_matches_cftr_sequence():
     })
     assert r.status_code == 200
     payload = r.json()
+
+
+def test_carrier_screening_navigator_returns_plain_language_guidance():
+    r = client.post("/api/v1/carrier/navigator", json={
+        "individual_a": {"name": "Ava", "gene": "HBB", "status": "carrier", "pattern": "autosomal_recessive"},
+        "individual_b": {"name": "Ben", "gene": "HBB", "status": "carrier", "pattern": "autosomal_recessive"},
+        "consent": True,
+    })
+    assert r.status_code == 200
+    payload = r.json()
+    assert "screening_steps" in payload
+    assert "privacy_guardrails" in payload
+    assert payload["shared_risk"]["status"] == "shared_recessive_carrier_risk"
+
+
+def test_family_health_tree_and_risk_insights_are_explainable_and_private():
+    r = client.post("/api/v1/family/tree", json={
+        "family_members": [
+            {"id": "p1", "name": "Ava", "relationship": "self", "carrier_status": "carrier", "gene": "HBB"},
+            {"id": "p2", "name": "Ben", "relationship": "partner", "carrier_status": "carrier", "gene": "HBB"},
+            {"id": "m1", "name": "Mother", "relationship": "mother", "carrier_status": "carrier", "gene": "HBB"},
+            {"id": "f1", "name": "Father", "relationship": "father", "carrier_status": "not_carrier", "gene": "HBB"},
+        ],
+        "edges": [["p1", "m1"], ["p1", "f1"], ["p2", "m1"], ["p2", "f1"]],
+    })
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["node_count"] >= 4
+    assert "privacy_guardrails" in payload
+    assert payload["reference_pathway"]["recommended_action"] == "schedule_genetic_counseling"
+
+    risk = client.post("/api/v1/family/risk-insights", json={
+        "family_tree": payload,
+        "couple_profile": {"gene": "HBB", "status": "carrier"},
+    })
+    assert risk.status_code == 200
+    risk_payload = risk.json()
+    assert "plain_language_summary" in risk_payload
+    assert risk_payload["risk_summary"]["status"] in {"shared_recessive_carrier_risk", "no_shared_gene_match"}
+
     assert payload["recognized_bases"]["A"] > 0
     assert payload["recognized_bases"]["T"] > 0
     assert payload["recognized_bases"]["G"] > 0

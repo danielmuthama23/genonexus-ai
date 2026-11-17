@@ -22,8 +22,11 @@ from .services.genevision_service import analyze_sequence, list_known_cftr_varia
 from .services.genomic_risk_service import (
     analyze_individual_profile,
     ask_counselling_question,
+    build_carrier_screening_navigator,
+    build_family_health_tree,
     compare_couple_risk,
     evaluate_inheritance,
+    generate_family_risk_insights,
     generate_inherited_risk_report,
     get_impact_dashboard,
     get_privacy_audit,
@@ -283,6 +286,33 @@ def consent_revoke(payload: dict):
 @app.get("/api/v1/privacy/audit")
 def privacy_audit():
     return {"audit_records": get_privacy_audit()}
+
+
+@app.post("/api/v1/carrier/navigator")
+def carrier_navigator(payload: dict):
+    try:
+        return build_carrier_screening_navigator(
+            payload.get("individual_a", {}),
+            payload.get("individual_b", {}),
+            bool(payload.get("consent", False)),
+            session_user=payload.get("session_user"),
+            consent_status=payload.get("consent_status"),
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+
+@app.post("/api/v1/family/tree")
+def family_tree(payload: dict):
+    return build_family_health_tree(payload)
+
+
+@app.post("/api/v1/family/risk-insights")
+def family_risk_insights(payload: dict):
+    return generate_family_risk_insights(
+        payload.get("family_tree", {}),
+        payload.get("couple_profile"),
+    )
 
 
 @app.post("/api/v1/profiles/analyze")

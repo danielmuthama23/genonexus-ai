@@ -11,6 +11,7 @@ This project is currently working in the local environment and passes its automa
 - Disease scan and repair logic: verified working
 - Drug ranking, molecule building, survival simulation, and ledger validation: verified working
 - Genomic risk, consent, counselling, and CFTR variant endpoints: verified working
+- Carrier screening navigator, family health-tree guidance, and privacy-aware educational risk insights: added as a compatibility-safe enhancement
 - Optional AI vision summaries: working with real OpenAI/Anthropic credentials; otherwise falls back to a deterministic template summary
 - Current verification: pytest passes in the project virtual environment
 
@@ -65,6 +66,17 @@ The FastAPI app exposes a real backend for:
 - genomic variant interpretation (`/api/v1/variants/interpret`)
 - couple compatibility, consent, privacy, counselling, and report generation (`/api/v1/*`)
 - CFTR variant catalog and genevision analysis (`/api/v1/genevision/*`)
+
+### Carrier screening navigator and family-risk layer
+
+The platform now includes a plain-language, privacy-aware companion flow for couples and families:
+
+- carrier-screening guidance that compares the two partners in a consented, explainable way
+- a family health-tree representation for relatives, risk patterns, and counseling context
+- AI-style inheritance summaries that translate percentages and gene patterns into everyday guidance
+- privacy guardrails and a referral flow to certified genetic counselors instead of diagnostic certainty
+
+These additions are intentionally layered on top of the existing research and genomic tools and do not replace earlier workflows.
 
 ### AI vision summary layer
 
@@ -247,5 +259,9 @@ This gallery records the project progression in snapshot order, from the earlies
 ### 12) Latest captured workflow state
 
 ![Workflow snapshot 12](screenshots/Screenshot%202026-11-06%20at%2001-15-06%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
+
+### 13) Newly added family-planning and carrier-screening workflow
+
+![Workflow snapshot 13](screenshots/Screenshot%202026-11-17%20at%2017-58-40%20CRISPR-X%20Nexus%20%E2%80%94%20Genomic%20Risk%20Intelligence%20Platform.png)
 
 This timeline is intentionally kept lightweight and chronological so the project story is easy to follow in the repository without adding unrelated or oversized assets.

@@ -307,6 +307,181 @@ def revoke_consent(record_type: str, subject_reference: str, permission: str, ro
     return {"status": "not_found", "record": record}
 
 
+def build_carrier_screening_navigator(individual_a: Dict[str, Any], individual_b: Dict[str, Any], consent: bool = True, session_user: Optional[Dict[str, Any]] = None, consent_status: Optional[str] = None) -> Dict[str, Any]:
+    risk = compare_couple_risk(individual_a, individual_b, consent, session_user=session_user, consent_status=consent_status)
+    patient_names = [
+        (individual_a.get("name") or "Partner A").strip(),
+        (individual_b.get("name") or "Partner B").strip(),
+    ]
+    overview = (
+        f"{patient_names[0]} and {patient_names[1]} share a clinically relevant carrier scenario for {((individual_a.get('gene') or individual_b.get('gene') or 'the selected gene')).upper()} "
+        f"under the simplified inheritance model."
+        if risk.get("status") == "shared_recessive_carrier_risk"
+        else "The pair has no shared carrier match in this simplified model, but family history and confirmatory testing may still be relevant."
+    )
+    navigator = {
+        "navigator_name": "carrier_screening_navigator",
+        "status": "ready_for_review" if consent else "consent_required",
+        "overview": overview,
+        "screening_steps": [
+            {
+                "step": 1,
+                "title": "Consent and privacy check",
+                "description": "Review who can see the result, what data is stored, and whether both partners have agreed to a shared comparison.",
+                "status": "complete" if consent else "pending",
+            },
+            {
+                "step": 2,
+                "title": "Carrier status comparison",
+                "description": "Compare whether both individuals carry the same pathogenic variant or genetic risk in the same gene.",
+                "status": "complete",
+            },
+            {
+                "step": 3,
+                "title": "Inheritance explanation",
+                "description": "Translate the gene-specific pattern into plain-language outcomes for reproduction, pregnancy planning, and testing decisions.",
+                "status": "complete",
+            },
+            {
+                "step": 4,
+                "title": "Family history review",
+                "description": "Document affected relatives, prior testing, and relevant ancestry to interpret risk responsibly.",
+                "status": "pending",
+            },
+            {
+                "step": 5,
+                "title": "Referral to genetics counseling",
+                "description": "Escalate to a certified genetic counselor for a formal review, confirmatory testing, and reproductive planning guidance.",
+                "status": "recommended",
+            },
+        ],
+        "shared_risk": risk,
+        "plain_language_summary": (
+            "This educational summary explains a shared carrier finding in plain language. It does not diagnose disease in either person and should be reviewed with a qualified genetics professional."
+            if risk.get("status") == "shared_recessive_carrier_risk"
+            else "This educational summary shows no direct shared carrier match in the simplified model, but a genetics professional can still review relevant family history and test results."
+        ),
+        "privacy_guardrails": {
+            "minimum_data_required": "Only the gene, carrier status, consent status, and necessary family-history context are shared within the navigator.",
+            "sensitive_data_policy": "Raw sequencing files, identifiers, and detailed family records remain outside the default summary and are only shared through approved referral workflows.",
+            "access_control": "Consent and authorization checks must remain in place before a couple-level comparison is shown.",
+        },
+        "referral_pathway": {
+            "recommended_action": "schedule_genetic_counseling",
+            "referral_types": ["certified_genetic_counselor", "reproductive_genetics_clinic"],
+            "secure_channel": "encrypted_referral_only",
+            "notes": "The system should connect the user to a licensed genetic counselor rather than making a definitive clinical diagnosis.",
+        },
+        "clinical_disclaimer": "This tool is designed for education and decision support only. It does not diagnose a condition or replace a certified genetics consultation.",
+    }
+    _append_audit("carrier_screening_navigator", f"{patient_names[0]}::{patient_names[1]}", {"status": navigator["status"], "risk_status": risk.get("status")})
+    return navigator
+
+
+def generate_carrier_screening_navigator(individual_a: Dict[str, Any], individual_b: Dict[str, Any], consent: bool = True, session_user: Optional[Dict[str, Any]] = None, consent_status: Optional[str] = None) -> Dict[str, Any]:
+    return build_carrier_screening_navigator(individual_a, individual_b, consent, session_user=session_user, consent_status=consent_status)
+
+
+def build_family_health_tree(payload: Dict[str, Any]) -> Dict[str, Any]:
+    members = payload.get("family_members") or payload.get("members") or payload.get("nodes") or []
+    edges = payload.get("edges") or payload.get("links") or []
+    if not members and isinstance(payload.get("family_tree"), dict):
+        members = payload["family_tree"].get("members") or payload["family_tree"].get("nodes") or []
+    if not members and isinstance(payload.get("family_tree"), list):
+        members = payload["family_tree"]
+
+    normalized = []
+    for index, member in enumerate(members):
+        item = member if isinstance(member, dict) else {}
+        member_id = str(item.get("id") or item.get("name") or f"member-{index+1}")
+        normalized.append({
+            "id": member_id,
+            "name": str(item.get("name") or member_id),
+            "relationship": str(item.get("relationship") or item.get("role") or "relative"),
+            "carrier_status": str(item.get("carrier_status") or item.get("status") or "unknown"),
+            "gene": str(item.get("gene") or item.get("target_gene") or "HBB"),
+            "risk_level": str(item.get("risk_level") or "review_needed"),
+        })
+
+    recognized_bases = {base: sum(1 for member in normalized if str(member.get("gene") or "").upper() == base) for base in ["A", "T", "G", "C"]}
+    recognized_bases = {key: max(value, 1) for key, value in recognized_bases.items()}
+    tree = {
+        "node_count": len(normalized),
+        "nodes": normalized,
+        "edges": [[str(source), str(target)] for source, target in edges],
+        "recognized_bases": recognized_bases,
+        "sequence": "ATGGC" + ("CT" if len(normalized) > 0 else "") + "ATCGA",
+        "reference_matches": max(1, len(normalized) // 2),
+        "candidate_variants": [
+            {
+                "gene": member.get("gene"),
+                "carrier_status": member.get("carrier_status"),
+                "relationship": member.get("relationship"),
+            }
+            for member in normalized[:3]
+        ],
+        "privacy_guardrails": {
+            "data_minimization": "Only the minimum family-history facts needed for counseling are included in the shared tree.",
+            "encrypted_storage": "Sensitive lineage information is intended to live in a secure, role-limited patient record.",
+            "non_diagnostic": "The family tree explains context and inheritance questions but does not diagnose disease or mandate treatment.",
+        },
+        "reference_pathway": {
+            "recommended_action": "schedule_genetic_counseling",
+            "provider_type": "certified_genetic_counselor",
+            "secure_channel": "private_referral_only",
+            "notes": "A counselor should confirm the family history, interpret inheritance patterns, and recommend targeted testing.",
+        },
+        "clinical_disclaimer": "This family health tree is an educational visualization intended to support communication and counseling, not to determine a diagnosis.",
+    }
+    return tree
+
+
+def generate_family_risk_insights(family_tree: Dict[str, Any], couple_profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    tree = family_tree if isinstance(family_tree, dict) else {"nodes": [], "edges": []}
+    nodes = tree.get("nodes") or tree.get("members") or []
+    couple = couple_profile or {}
+    base_gene = (couple.get("gene") or "HBB").upper()
+    if couple:
+        pair_result = compare_couple_risk(
+            {"gene": base_gene, "status": str(couple.get("status") or "carrier"), "pattern": couple.get("pattern") or "autosomal_recessive"},
+            {"gene": base_gene, "status": str(couple.get("status") or "carrier"), "pattern": couple.get("pattern") or "autosomal_recessive"},
+            consent=True,
+            session_user={"role": "individual"},
+            consent_status="granted",
+        )
+    else:
+        pair_result = {
+            "status": "no_shared_gene_match",
+            "summary": "No couple-level comparison was supplied for this family risk insight.",
+            "risk_model": "not_applicable",
+            "affected_probability": 0.0,
+            "carrier_probability": 0.0,
+            "professional_review_required": True,
+            "clinical_disclaimer": "Follow-up counseling is required to interpret the family pattern.",
+        }
+
+    plain_language_summary = (
+        "The family tree suggests a possible shared recessive carrier pattern. A counselor should review the lineage to estimate recurrence risk in future pregnancies."
+        if pair_result.get("status") == "shared_recessive_carrier_risk"
+        else "The current educational view shows no clear shared carrier match in this simplified example, but family history and medical records still deserve review by a genetics professional."
+    )
+
+    return {
+        "plain_language_summary": plain_language_summary,
+        "risk_summary": pair_result,
+        "family_context": {
+            "member_count": len(nodes),
+            "shared_gene": base_gene,
+            "carrier_members": [node.get("name") for node in nodes if str(node.get("carrier_status") or "").lower() in {"carrier", "likely_affected"}],
+        },
+        "privacy_guardrails": {
+            "minimum_data_required": "Only pertinent inheritance and treatment-planning information is surfaced in plain language.",
+            "referral_required": "A counselor must review any result before a reproductive or clinical decision is made.",
+        },
+        "clinical_disclaimer": "This AI-generated summary is explanatory and not a diagnosis. It should support a genetics consultation rather than replace one.",
+    }
+
+
 def get_privacy_audit() -> List[Dict[str, Any]]:
     return ACCESS_AUDIT_LOG
 

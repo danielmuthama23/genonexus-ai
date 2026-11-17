@@ -670,6 +670,66 @@
     <div class="dash-grid" id="dash-grid"></div>
   </div>
 
+  <div class="panel" id="sec-family-planning">
+    <h2><span class="nbadge">14</span><span class="dot"></span>Carrier screening navigator &amp; family health tree</h2>
+    <div class="subtitle" style="margin-bottom:14px;">
+      This companion flow translates dense genetic outputs into plain-language guidance for couples, with consent checks, privacy guardrails, explainable inheritance summaries, and a secure referral path to certified genetic counselors.
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="row">
+          <div class="field">
+            <label>Partner A name</label>
+            <input id="carrier-partner-a-name" type="text" value="Ava">
+          </div>
+          <div class="field">
+            <label>Partner B name</label>
+            <input id="carrier-partner-b-name" type="text" value="Ben">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Gene</label>
+            <select id="carrier-gene">
+              <option value="HBB">HBB</option>
+              <option value="CFTR">CFTR</option>
+              <option value="BRCA1">BRCA1</option>
+              <option value="G6PD">G6PD</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Inheritance</label>
+            <select id="carrier-pattern">
+              <option value="autosomal_recessive">Autosomal recessive</option>
+              <option value="autosomal_dominant">Autosomal dominant</option>
+              <option value="x_linked_recessive">X-linked recessive</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="action primary" id="btn-run-carrier-navigator">Run carrier navigator</button>
+          <button class="action" id="btn-build-family-tree">Build family health tree</button>
+        </div>
+      </div>
+      <div>
+        <label>Family-history input</label>
+        <textarea id="family-tree-input" rows="12" style="width:100%;background:var(--bg-panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;resize:vertical;">{
+  "family_members": [
+    {"id":"p1","name":"Ava","relationship":"self","carrier_status":"carrier","gene":"HBB"},
+    {"id":"p2","name":"Ben","relationship":"partner","carrier_status":"carrier","gene":"HBB"},
+    {"id":"m1","name":"Ava's mother","relationship":"mother","carrier_status":"carrier","gene":"HBB"},
+    {"id":"f1","name":"Ava's father","relationship":"father","carrier_status":"not_carrier","gene":"HBB"},
+    {"id":"m2","name":"Ben's mother","relationship":"mother","carrier_status":"carrier","gene":"HBB"},
+    {"id":"f2","name":"Ben's father","relationship":"father","carrier_status":"not_carrier","gene":"HBB"}
+  ],
+  "edges": [["p1","m1"],["p1","f1"],["p2","m2"],["p2","f2"]]
+}</textarea>
+      </div>
+    </div>
+    <div id="carrier-navigator-output" class="dock-target-note" style="margin-top:14px;display:none;"></div>
+    <div id="family-tree-output" class="dock-target-note" style="margin-top:14px;display:none;"></div>
+  </div>
+
   <footer class="about">
     <div>
       <h3>Technology &amp; tools actually used</h3>
@@ -3266,6 +3326,103 @@ renderLabSvg();
   }, { rootMargin: '-70px 0px -70% 0px', threshold: 0 });
   sections.forEach(s=> observer.observe(s));
 })();
+
+/* ---------- CARRIER SCREENING NAVIGATOR ---------- */
+async function runCarrierNavigator(){
+  const payload = {
+    individual_a: {
+      name: document.getElementById('carrier-partner-a-name').value || 'Ava',
+      gene: document.getElementById('carrier-gene').value,
+      status: 'carrier',
+      pattern: document.getElementById('carrier-pattern').value,
+    },
+    individual_b: {
+      name: document.getElementById('carrier-partner-b-name').value || 'Ben',
+      gene: document.getElementById('carrier-gene').value,
+      status: 'carrier',
+      pattern: document.getElementById('carrier-pattern').value,
+    },
+    consent: true,
+    session_user: { role: 'individual' },
+    consent_status: 'granted',
+  };
+
+  const outputEl = document.getElementById('carrier-navigator-output');
+  try {
+    const response = await fetch('http://localhost:8000/api/v1/carrier/navigator', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    outputEl.style.display = 'block';
+    outputEl.innerHTML = `
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Carrier screening navigator</div>
+      <div style="font-size:12.5px;line-height:1.6;color:var(--text);">
+        <b>${data.navigator_name || 'Carrier Screening Navigator'}</b><br>
+        ${data.plain_language_summary || 'A decision-support summary is available.'}
+        <ul style="margin:8px 0 0 18px; padding:0; color:var(--muted);">
+          ${((data.screening_steps || []).map(s => `<li><b style="color:var(--text);">${s.step}. ${s.title}</b>: ${s.description}</li>`).join('')) || '<li>Consent and risk review are pending.</li>'}
+        </ul>
+      </div>
+      <div style="margin-top:10px; font-size:11.5px; color:var(--muted);">
+        Privacy: ${data.privacy_guardrails ? data.privacy_guardrails.minimum_data_required : 'Sensitive data stays minimal and consented.'}
+      </div>
+    `;
+  } catch (error) {
+    outputEl.style.display = 'block';
+    outputEl.innerHTML = `
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Carrier screening navigator (offline fallback)</div>
+      <div style="font-size:12.5px;line-height:1.6; color:var(--text);">
+        Both partners carry the same variant in the selected gene under a simplified autosomal recessive model. A genetics professional should review the result, confirm carrier status, and explain pregnancy-planning risks without making a diagnosis.
+      </div>
+    `;
+  }
+}
+
+async function buildFamilyHealthTree(){
+  const raw = document.getElementById('family-tree-input').value;
+  const outputEl = document.getElementById('family-tree-output');
+  let payload = {};
+  try {
+    payload = JSON.parse(raw);
+  } catch (error) {
+    outputEl.style.display = 'block';
+    outputEl.innerHTML = '<b>Family health tree input is not valid JSON.</b> Please use the example format shown in the field.';
+    return;
+  }
+  try {
+    const response = await fetch('http://localhost:8000/api/v1/family/tree', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    outputEl.style.display = 'block';
+    outputEl.innerHTML = `
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Family health tree</div>
+      <div style="font-size:12.5px;line-height:1.6;color:var(--text);">
+        ${data.node_count || 0} family members are represented in the shared healthcare view. Each node keeps only the minimum genetic context needed for counseling and planning.
+        <br><br>
+        <b>Recommended next step:</b> ${data.reference_pathway ? data.reference_pathway.recommended_action : 'schedule_genetic_counseling'}
+      </div>
+      <div style="margin-top:10px; font-size:11.5px; color:var(--muted);">
+        ${data.privacy_guardrails ? data.privacy_guardrails.data_minimization : 'Sensitive family data remain minimized and consented.'}
+      </div>
+    `;
+  } catch (error) {
+    outputEl.style.display = 'block';
+    outputEl.innerHTML = `
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Family health tree (offline fallback)</div>
+      <div style="font-size:12.5px;line-height:1.6;color:var(--text);">
+        The family tree is intentionally limited to high-level, consented lineage information and should be reviewed by a certified genetic counselor before any clinical or reproductive decision is made.
+      </div>
+    `;
+  }
+}
+
+document.getElementById('btn-run-carrier-navigator').addEventListener('click', runCarrierNavigator);
+document.getElementById('btn-build-family-tree').addEventListener('click', buildFamilyHealthTree);
 
 /* ---------- INIT ---------- */
 populateTargetSelect();
