@@ -1,5 +1,7 @@
 # CRISPR-X Nexus
 
+![GenoNexus AI overview banner](screenshots/GenoNexus%20AI%20CRISPR-X%20Banner.png)
+
 CRISPR-X Nexus is a working genomic intelligence prototype for disease screening, carrier-risk assessment, CRISPR workflow simulation, and AI-assisted DNA analysis. The repo currently includes a FastAPI backend, a static browser UI, a synthetic ATCG object-detection pipeline, and a set of verified genomic-risk and research workflows.
 
 ## Verified status
